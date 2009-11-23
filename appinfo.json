@@ -1,0 +1,9 @@
+{
+	"id": "us.ryanhope.freetether",
+	"version": "0.0.1",
+	"vendor": "us.ryanhope",
+	"type": "web",
+	"main": "index.html",
+	"title": "freeTether",
+	"icon": "icon.png"
+}
