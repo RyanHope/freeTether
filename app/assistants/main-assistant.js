@@ -13,6 +13,15 @@ function MainAssistant() {
 	this.wanIPmodel = {
 		disabled: true
     };
+	this.wifiIPmodel = {
+		disabled: true
+    };
+	this.usbIPmodel = {
+		disabled: true
+    };
+	this.btIPmodel = {
+		disabled: true
+    };
 	
 	this.ipForwardingModel = {
 		value: false,
@@ -35,6 +44,15 @@ MainAssistant.prototype.setup = function() {
 	this.versionElement = this.controller.get('version');
 	this.versionElement.innerHTML = "v" + Mojo.Controller.appInfo.version;
 	
+	this.wanGroup = this.controller.get('wanGroup');
+	this.wifiGroup = this.controller.get('wifiGroup');
+	this.usbGroup = this.controller.get('usbGroup');
+	this.btGroup = this.controller.get('btGroup');
+
+	this.wifiGroup.style.display = 'none';
+	this.usbGroup.style.display = 'none';
+	this.btGroup.style.display = 'none';
+			
 	this.menuModel = {
 		visible:true,
 		items: [
@@ -59,6 +77,30 @@ MainAssistant.prototype.setup = function() {
 			focus: false
 		},
 		this.model = this.wanIPmodel
+	);
+	this.controller.setupWidget("wifiIP",
+		this.attributes = {
+			multiline: false,
+			enterSubmits: false,
+			focus: false
+		},
+		this.model = this.wifiIPmodel
+	);
+	this.controller.setupWidget("usbIP",
+		this.attributes = {
+			multiline: false,
+			enterSubmits: false,
+			focus: false
+		},
+		this.model = this.usbIPmodel
+	);
+	this.controller.setupWidget("btIP",
+		this.attributes = {
+			multiline: false,
+			enterSubmits: false,
+			focus: false
+		},
+		this.model = this.btIPmodel
 	);
 	
 	this.controller.setupWidget('ipForwarding',
@@ -87,6 +129,15 @@ MainAssistant.prototype.setup = function() {
 
 }
 
+MainAssistant.prototype.getIPs = function() {
+	
+	freeTetherD.getIP('ppp0', this.getIPHandler.bindAsEventListener(this), this.errorHandler.bindAsEventListener(this));
+	freeTetherD.getIP('usb0', this.getIPHandler.bindAsEventListener(this), this.errorHandler.bindAsEventListener(this));
+	freeTetherD.getIP('eth0', this.getIPHandler.bindAsEventListener(this), this.errorHandler.bindAsEventListener(this));
+	freeTetherD.getIP('bsl0', this.getIPHandler.bindAsEventListener(this), this.errorHandler.bindAsEventListener(this));
+	
+}
+
 MainAssistant.prototype.debugPayload = function(payload) {
 	
 	alert('------');
@@ -99,8 +150,25 @@ MainAssistant.prototype.cmHandler = function(payload) {
 	
 	connectionInfo = payload;
 	
-	this.wanIPmodel.value = payload.wan.ipAddress;
-	this.controller.modelChanged(this.wanIPmodel);
+	this.getIPs();
+			
+}
+
+MainAssistant.prototype.getIPHandler = function(payload) {
+	
+	var model = {};
+
+	if (payload.interface == "ppp0")
+		model = this.wanIPmodel;
+	else if (payload.interface == "usb0")
+		model = this.usbIPmodel;
+	else if (payload.interface == "eth0")
+		model = this.wifiIPmodel;
+	else if (payload.interface == "bsl0")  
+		model = this.btIPmodel;
+
+	model.value = payload.address;
+	this.controller.modelChanged(model);
 			
 }
 
@@ -130,9 +198,28 @@ MainAssistant.prototype.handleCommand = function(event) {
 	
 	if(event.type == Mojo.Event.command) {
 		
-		switch (event.command)
-		{
+		if (event.command == 'show-wan') {
+			this.wanGroup.style.display = '';
+			this.wifiGroup.style.display = 'none';
+			this.usbGroup.style.display = 'none';
+			this.btGroup.style.display = 'none';
+		} else if (event.command == 'show-wifi') {
+			this.wanGroup.style.display = 'none';
+			this.wifiGroup.style.display = '';
+			this.usbGroup.style.display = 'none';
+			this.btGroup.style.display = 'none';			
+		} else if (event.command == 'show-usb') {
+			this.wanGroup.style.display = 'none';
+			this.wifiGroup.style.display = 'none';
+			this.usbGroup.style.display = '';
+			this.btGroup.style.display = 'none';
+		} else if (event.command == 'show-bt') {
+			this.wanGroup.style.display = 'none';
+			this.wifiGroup.style.display = 'none';
+			this.usbGroup.style.display = 'none';
+			this.btGroup.style.display = '';
 		}
+		
 	}
 	
 }
