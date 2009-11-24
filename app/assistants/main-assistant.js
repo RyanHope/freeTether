@@ -26,9 +26,14 @@ function MainAssistant() {
 	
 	freeTetherD.natEnable(false, false);
 	
+	this.versionElement = false;
+	
 }
 
 MainAssistant.prototype.setup = function() {
+	
+	this.versionElement = this.controller.get('version');
+	this.versionElement.innerHTML = "v" + Mojo.Controller.appInfo.version;
 	
 	this.menuModel = {
 		visible:true,
@@ -113,7 +118,7 @@ MainAssistant.prototype.ipForwardingToggleChangeHandler = function(event) {
 MainAssistant.prototype.natToggleChangeHandler = function(event) {
 	if (event.value==1)
 		freeTetherD.natEnable(false, false);
-	else
+	else if (event.value==0)
 		freeTetherD.natDisable(false, false);
 }
 
