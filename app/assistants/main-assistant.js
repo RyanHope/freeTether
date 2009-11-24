@@ -14,13 +14,13 @@ function MainAssistant() {
 		disabled: true
     };
 	this.wifiIPmodel = {
-		disabled: true
+		disabled: false
     };
 	this.usbIPmodel = {
-		disabled: true
+		disabled: false
     };
 	this.btIPmodel = {
-		disabled: true
+		disabled: false
     };
 	
 	this.ipForwardingModel = {
@@ -48,6 +48,11 @@ MainAssistant.prototype.setup = function() {
 	this.wifiGroup = this.controller.get('wifiGroup');
 	this.usbGroup = this.controller.get('usbGroup');
 	this.btGroup = this.controller.get('btGroup');
+	
+	this.wanIP = this.controller.get('wanIP');
+	this.wifiIP = this.controller.get('wifiIP');
+	this.usbIP = this.controller.get('usbIP');
+	this.btIP = this.controller.get('btIP');
 
 	this.wifiGroup.style.display = 'none';
 	this.usbGroup.style.display = 'none';
@@ -73,7 +78,7 @@ MainAssistant.prototype.setup = function() {
 	this.controller.setupWidget("wanIP",
 		this.attributes = {
 			multiline: false,
-			enterSubmits: false,
+			enterSubmits: true,
 			focus: false
 		},
 		this.model = this.wanIPmodel
@@ -81,27 +86,35 @@ MainAssistant.prototype.setup = function() {
 	this.controller.setupWidget("wifiIP",
 		this.attributes = {
 			multiline: false,
-			enterSubmits: false,
+			enterSubmits: true,
+			holdToEdit: true,
 			focus: false
 		},
 		this.model = this.wifiIPmodel
 	);
+	Mojo.Event.listen(this.wifiIP, Mojo.Event.propertyChange, this.changeIPwifi.bindAsEventListener(this));
+	
 	this.controller.setupWidget("usbIP",
 		this.attributes = {
 			multiline: false,
-			enterSubmits: false,
+			enterSubmits: true,
+			holdToEdit: true,
 			focus: false
 		},
 		this.model = this.usbIPmodel
 	);
+	Mojo.Event.listen(this.usbIP, Mojo.Event.propertyChange, this.changeIPusb.bindAsEventListener(this));
+	
 	this.controller.setupWidget("btIP",
 		this.attributes = {
 			multiline: false,
-			enterSubmits: false,
+			enterSubmits: true,
+			holdToEdit: true,
 			focus: false
 		},
 		this.model = this.btIPmodel
 	);
+	Mojo.Event.listen(this.btIP, Mojo.Event.propertyChange, this.changeIPbt.bindAsEventListener(this));
 	
 	this.controller.setupWidget('ipForwarding',
 		this.attributes = {
@@ -127,6 +140,56 @@ MainAssistant.prototype.setup = function() {
 	);
 	this.controller.listen('nat',	Mojo.Event.propertyChange, this.natToggleChangeHandler);
 
+}
+
+MainAssistant.prototype.validateIPAddress = function(inputString) {
+	
+	var re = /^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/;
+
+	if (re.test(inputString)) {
+		var parts = inputString.split(".");
+		if (parseInt(parseFloat(parts[0])) == 0)
+			return false;
+	   for (var i=0; i<parts.length; i++) {
+			if (parseInt(parseFloat(parts[i])) > 255)
+				return false;
+		}
+		return true;
+	}
+	
+}
+
+MainAssistant.prototype.changeIPusb = function(event) {
+	
+	if (this.validateIPAddress(event.value)) {
+		freeTetherD.setIP('usb0', event.value, this.getIPHandler.bindAsEventListener(this), this.errorHandler.bindAsEventListener(this));
+	} else {
+		this.usbIPmodel.value = event.oldValue;
+		this.controller.modelChanged(this.usbIPmodel);	
+	}
+	
+}
+
+MainAssistant.prototype.changeIPwifi = function(event) {
+	
+	if (this.validateIPAddress(event.value)) {
+		freeTetherD.setIP('eth0', event.value, this.getIPHandler.bindAsEventListener(this), this.errorHandler.bindAsEventListener(this));
+	} else {
+		this.wifiIPmodel.value = event.oldValue;
+		this.controller.modelChanged(this.wifiIPmodel);	
+	}
+	
+}
+
+MainAssistant.prototype.changeIPbt = function(event) {
+	
+	if (this.validateIPAddress(event.value)) {
+		freeTetherD.setIP('bsl0', event.value, this.getIPHandler.bindAsEventListener(this), this.errorHandler.bindAsEventListener(this));
+	} else {
+		this.usbIPmodel.value = event.oldValue;
+		this.controller.modelChanged(this.bslIPmodel);	
+	}
+	
 }
 
 MainAssistant.prototype.getIPs = function() {
@@ -155,6 +218,8 @@ MainAssistant.prototype.cmHandler = function(payload) {
 }
 
 MainAssistant.prototype.getIPHandler = function(payload) {
+	
+	this.debugPayload(payload);
 	
 	var model = {};
 

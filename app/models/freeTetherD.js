@@ -68,3 +68,19 @@ freeTetherD.getIP = function(iface, onSuccess, onFailure)
 
 	return request;
 }
+
+freeTetherD.setIP = function(iface, addy, onSuccess, onFailure)
+{
+	var request = new Mojo.Service.Request(freeTetherD.identifier,
+	{
+		method: 'set_ip_address',
+		parameters: {
+			"interface": iface,
+			"address": addy,
+		},
+		onSuccess: onSuccess,
+		onFailure: onFailure
+	});
+
+	return request;
+}
