@@ -1,6 +1,8 @@
 [
 	{"source": "app/models/network.js"},
 	{"source": "app/models/freeTetherD.js"},
+	{"source": "app/models/networkInterface.js"},
+	{"source": "app/models/networkInterfaces.js"},
     {"source": "app/assistants/stage-assistant.js"},
     {
         "scenes": "main",
