@@ -10,10 +10,12 @@ function MainAssistant() {
 
 MainAssistant.prototype.setup = function() {
 	
+	this.versionElement					= this.controller.get('version');
 	this.viewOptions					= this.controller.get('viewOptions');
 	this.viewInterfaces					= this.controller.get('viewInterfaces');
 	this.networkInterfaceListElement	= this.controller.get('interfaceList');
 	
+	this.versionElement.innerHTML		= "v" + Mojo.Controller.appInfo.version;
 	this.viewOptions.style.display		= '';
 	this.viewInterfaces.style.display	= 'none';
 
