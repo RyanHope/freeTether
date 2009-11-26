@@ -20,7 +20,7 @@ networkInterface.prototype.getListObject = function()
 	
 	var obj =
 	{
-		key:		networkInterfaces.getServerArrayKey(this.name),
+		key:		networkInterfaces.getInterfaceArrayKey(this.name),
 		name:		this.name,
 	};
 		

@@ -7,7 +7,7 @@ function networkInterfaces()
 	
 	this.networkInterfaces	= [];
 	for (var i=0; i<this.interfaceNames.length; i++)
-		this.networkInterfaces[this.interfaceNames[i]] = new networkInterface(this.interfaceNames[i]);
+		this.networkInterfaces.push(new networkInterface(this.interfaceNames[i]));
 		
 }
 
