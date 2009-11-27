@@ -2,6 +2,19 @@ freeTetherD.identifier = 'luna://us.ryanhope.freeTetherD';
 
 function freeTetherD() {}
 
+freeTetherD.getCarrier = function(onSuccess, onFailure)
+{
+	var request = new Mojo.Service.Request(freeTetherD.identifier,
+	{
+		method: 'get_carrier',
+		parameters: {},
+		onSuccess: onSuccess,
+		onFailure: onFailure
+	});
+
+	return request;
+}
+
 freeTetherD.getIPforward = function(onSuccess, onFailure)
 {
 	var request = new Mojo.Service.Request(freeTetherD.identifier,

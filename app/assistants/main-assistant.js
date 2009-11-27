@@ -1,5 +1,7 @@
 function MainAssistant() {
 	
+	freeTetherD.getCarrier(this.getCarrierHandler.bindAsEventListener(this), false);
+	
 	this.networkInterfaceListModel = {
 		items: []
 	};
@@ -11,13 +13,16 @@ function MainAssistant() {
 MainAssistant.prototype.setup = function() {
 	
 	this.versionElement					= this.controller.get('version');
-	this.viewOptions					= this.controller.get('viewOptions');
-	this.viewInterfaces					= this.controller.get('viewInterfaces');
-	this.networkInterfaceListElement	= this.controller.get('interfaceList');
-	
 	this.versionElement.innerHTML		= "v" + Mojo.Controller.appInfo.version;
+	
+	this.viewOptions					= this.controller.get('viewOptions');
 	this.viewOptions.style.display		= '';
+	this.viewInterfaces					= this.controller.get('viewInterfaces');
 	this.viewInterfaces.style.display	= 'none';
+	this.viewRoutes						= this.controller.get('viewRoutes');
+	this.viewRoutes.style.display		= 'none';
+	
+	this.networkInterfaceListElement	= this.controller.get('interfaceList');
 
 	this.menuModel = {
 		visible:true,
@@ -28,6 +33,7 @@ MainAssistant.prototype.setup = function() {
 			items:[
 				{label:$L('Options'), command:'viewOptions'}, 
 				{label:$L('Interfaces'), command:'viewInterfaces'},
+				{label:$L('Routes'), command:'viewRoutes'},
 			]},
 			{},
 		]
@@ -42,11 +48,18 @@ MainAssistant.prototype.setup = function() {
 		{
 			itemTemplate: "main/interface-row",
 			swipeToDelete: false,
-			reorderable: false,
+			reorderable: false, 
 		},
 		this.networkInterfaceListModel
 	);
 	
+}
+
+MainAssistant.prototype.getCarrierHandler = function(payload) {
+
+	carrier = payload.longName;
+	this.updateInterfaceList(false);
+		
 }
 
 MainAssistant.prototype.updateInterfaceList = function(skipUpdate)
@@ -72,10 +85,18 @@ MainAssistant.prototype.handleCommand = function(event) {
 			case 'viewOptions':
 				this.viewOptions.style.display = '';
 				this.viewInterfaces.style.display = 'none';
+				this.viewRoutes.style.display = 'none';
 				break;
 			
 			case 'viewInterfaces':
 				this.viewInterfaces.style.display = '';
+				this.viewOptions.style.display = 'none';
+				this.viewRoutes.style.display = 'none';
+				break;
+				
+			case 'viewRoutes':
+				this.viewRoutes.style.display = '';
+				this.viewInterfaces.style.display = 'none';
 				this.viewOptions.style.display = 'none';
 				break;
 		}

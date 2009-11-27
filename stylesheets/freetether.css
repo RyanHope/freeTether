@@ -40,12 +40,14 @@
 	background:url(../images/wifi_logo.png) top center no-repeat;
 }
 
-.interface-list .palm-list .palm-row-wrapper
-{
-	padding-right: 4px;
-}
 .interface-list .palm-list .palm-row-wrapper .interface
 {
-	padding-top: 5px;
-	margin-top: 0px;
+}
+.interface-list .palm-list .palm-row-wrapper .interface.description
+{
+}
+.interface-list .palm-list .palm-row-wrapper .interface.name
+{
+	color: #999;
+	font-size: 10px;
 }

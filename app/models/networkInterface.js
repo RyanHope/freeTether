@@ -1,8 +1,9 @@
-function networkInterface(name) {
+function networkInterface(name, description) {
 	
-	this.name		= name;
-	this.state		= false;
-	this.address	= false;
+	this.name			= name;
+	this.description	= description;
+	this.state			= false;
+	this.address		= false;
 	
 	this.ipModel = {
 		disabled: false
@@ -12,7 +13,7 @@ function networkInterface(name) {
 		value: false,
 		disabled: false
 	};
-		
+	
 }
 
 networkInterface.prototype.getListObject = function()
@@ -20,8 +21,9 @@ networkInterface.prototype.getListObject = function()
 	
 	var obj =
 	{
-		key:		networkInterfaces.getInterfaceArrayKey(this.name),
-		name:		this.name,
+		key:			networkInterfaces.interfaces.get(this.name),
+		name:			this.name,
+		description:	this.description,
 	};
 		
 	return obj;

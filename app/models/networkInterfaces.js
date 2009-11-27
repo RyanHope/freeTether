@@ -1,63 +1,50 @@
-function networkInterfaces()
-{
+function networkInterfaces() {
+		
+	this.listAssistant		= false; 
 	
-	this.listAssistant		= false;
+	this.interfaces	= $H();
+	this.interfaces.set('ppp0', new networkInterface('ppp0', ''));
+	this.interfaces.set('usb0', new networkInterface('usb0', 'USB Network'));
+	this.interfaces.set('eth0', new networkInterface('eth0', 'Wireless Network'));
+	this.interfaces.set('bsl0', new networkInterface('bsl0', 'Bluetooth Network'));
+			
+}
+
+networkInterfaces.prototype.debugPayload = function(payload) {
 	
-	this.interfaceNames		= ['ppp0','usb0','eth0','bsl0'];
-	
-	this.networkInterfaces	= [];
-	for (var i=0; i<this.interfaceNames.length; i++)
-		this.networkInterfaces.push(new networkInterface(this.interfaceNames[i]));
+	alert('------');
+	for (p in payload) 
+		alert(p + ': ' + payload[p]);
 		
 }
 
-networkInterfaces.prototype.setListAssistant = function(assistant)
-{
+networkInterfaces.prototype.errorHandler = function(payload) {
+
+	this.debugPayload(payload);
+		
+}
+
+networkInterfaces.prototype.setListAssistant = function(assistant) {
+	
 	this.listAssistant = assistant;
+	
 }
 
-networkInterfaces.prototype.getListObjects = function()
-{
+networkInterfaces.prototype.getListObjects = function() {
+	
 	var returnArray = [];
-	if (this.networkInterfaces.length > 0)
+	
+	var iname = this.interfaces.keys();
+	for (var i = 0; i < iname.length; i++)
 	{
-		for (var i = 0; i < this.networkInterfaces.length; i++)
-		{
-			if (this.networkInterfaces[i]) 
-			{
-				returnArray.push(this.networkInterfaces[i].getListObject());
-			}
-		}
+		/*
+		 * XXX: Dirty hack!
+		 */
+		if (iname[i]=='ppp0')
+			this.interfaces.get(iname[i]).description = carrier + ' Network';
+		returnArray.push(this.interfaces.get(iname[i]).getListObject());
 	}
+	
 	return returnArray;
-}
-
-networkInterfaces.prototype.getInterfaceArrayKey = function(name)
-{
-	if (this.networkInterfaces.length > 0)
-	{
-		for (var i = 0; i < this.networkInterfaces.length; i++)
-		{
-			if (this.networkInterfaces[i].name == name)
-			{
-				return i;
-			}
-		}
-	}
-	return false;
-}
-
-networkInterfaces.prototype.getInterfaceForId = function(name)
-{
-	if (this.networkInterfaces.length > 0)
-	{
-		for (var i = 0; i < this.networkInterfaces.length; i++)
-		{
-			if (this.networkInterfaces[i].name == name)
-			{
-				return this.networkInterfaces[i];
-			}
-		}
-	}
-	return false;
+	
 }

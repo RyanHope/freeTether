@@ -1,5 +1,5 @@
 [
-	{"source": "app/models/network.js"},
+	{"source": "app/models/palmServices.js"},
 	{"source": "app/models/freeTetherD.js"},
 	{"source": "app/models/networkInterface.js"},
 	{"source": "app/models/networkInterfaces.js"},
