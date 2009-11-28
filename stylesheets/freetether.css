@@ -27,13 +27,20 @@
 	margin-top: 0px;
 }
 
+.state0,
+.state1
+{
+	float: right;
+	width: 46px;
+	height: 46px;
+}
 .state0
 {
-	background: url(../images/blue-off-32.png) top center no-repeat;
+	background: url(../images/blue-off-32.png) center center no-repeat;
 }
 .state1
 {
-	background: url(../images/blue-on-32.png) top center no-repeat;
+	background: url(../images/blue-on-32.png) center center no-repeat;
 }
 
 
