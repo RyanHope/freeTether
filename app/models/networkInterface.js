@@ -23,16 +23,13 @@ function networkInterface(name, description) {
 
 networkInterface.prototype.getListObject = function()
 {
-	var interfaceState = 'down';
-	if (this.state)
-		interfaceState = 'up';
 		
 	var obj =
 	{
 		key:			networkInterfaces.interfaces.get(this.name),
 		name:			this.name,
 		description:	this.description,
-		state:			interfaceState,
+		state:			this.state,
 		address:		this.address,
 		broadcast:		this.broadcast,
 		netmask:		this.netmask,

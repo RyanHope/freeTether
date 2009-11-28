@@ -27,6 +27,16 @@
 	margin-top: 0px;
 }
 
+.state0
+{
+	background: url(../images/blue-off-32.png) top center no-repeat;
+}
+.state1
+{
+	background: url(../images/blue-on-32.png) top center no-repeat;
+}
+
+
 .icon-usb
 {
 	background: url(../images/notification-large-usb.png) top center no-repeat;
@@ -38,13 +48,4 @@
 .icon-wifi
 {
 	background: url(../images/wifi_logo.png) top center no-repeat;
-}
-
-.interface-list .palm-list .palm-row-wrapper .interface .state.down
-{
-	background: url(../images/blue-off-32.png) top center no-repeat;
-}
-.interface-list .palm-list .palm-row-wrapper .interface .state.up
-{
-	background: url(../images/blue-on-32.png) top center no-repeat;
 }
