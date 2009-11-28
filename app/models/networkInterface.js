@@ -4,6 +4,11 @@ function networkInterface(name, description) {
 	this.description	= description;
 	this.state			= false;
 	this.address		= false;
+	this.broadcast		= false;
+	this.netmask		= false;
+	this.cidr			= false;
+	this.tx				= false;
+	this.rx				= false;
 	
 	this.ipModel = {
 		disabled: false
@@ -18,12 +23,22 @@ function networkInterface(name, description) {
 
 networkInterface.prototype.getListObject = function()
 {
-	
+	var interfaceState = 'down';
+	if (this.state)
+		interfaceState = 'up';
+		
 	var obj =
 	{
 		key:			networkInterfaces.interfaces.get(this.name),
 		name:			this.name,
 		description:	this.description,
+		state:			interfaceState,
+		address:		this.address,
+		broadcast:		this.broadcast,
+		netmask:		this.netmask,
+		cidr:			this.cidr,
+		tx:				this.tx,
+		rx:				this.rx,
 	};
 		
 	return obj;

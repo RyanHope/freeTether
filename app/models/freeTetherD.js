@@ -69,6 +69,19 @@ freeTetherD.natDisable = function(onSuccess, onFailure)
 	return request;
 }
 
+freeTetherD.getInterface = function(iface, onSuccess, onFailure)
+{
+	var request = new Mojo.Service.Request(freeTetherD.identifier,
+	{
+		method: 'get_interface',
+		parameters: {"interface":iface},
+		onSuccess: onSuccess,
+		onFailure: onFailure
+	});
+
+	return request;
+}
+
 freeTetherD.getIP = function(iface, onSuccess, onFailure)
 {
 	var request = new Mojo.Service.Request(freeTetherD.identifier,

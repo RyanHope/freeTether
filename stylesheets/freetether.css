@@ -29,25 +29,22 @@
 
 .icon-usb
 {
-	background:url(../images/notification-large-usb.png) top center no-repeat;
+	background: url(../images/notification-large-usb.png) top center no-repeat;
 }
 .icon-bt
 {
-	background:url(../images/BlueTooth.png) top center no-repeat;
+	background: url(../images/BlueTooth.png) top center no-repeat;
 }
 .icon-wifi
 {
-	background:url(../images/wifi_logo.png) top center no-repeat;
+	background: url(../images/wifi_logo.png) top center no-repeat;
 }
 
-.interface-list .palm-list .palm-row-wrapper .interface
+.interface-list .palm-list .palm-row-wrapper .interface .state.down
 {
+	background: url(../images/blue-off-32.png) top center no-repeat;
 }
-.interface-list .palm-list .palm-row-wrapper .interface.description
+.interface-list .palm-list .palm-row-wrapper .interface .state.up
 {
-}
-.interface-list .palm-list .palm-row-wrapper .interface.name
-{
-	color: #999;
-	font-size: 10px;
+	background: url(../images/blue-on-32.png) top center no-repeat;
 }

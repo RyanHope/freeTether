@@ -4,9 +4,9 @@ function networkInterfaces() {
 	
 	this.interfaces	= $H();
 	this.interfaces.set('ppp0', new networkInterface('ppp0', ''));
-	this.interfaces.set('usb0', new networkInterface('usb0', 'USB Network'));
-	this.interfaces.set('eth0', new networkInterface('eth0', 'Wireless Network'));
-	this.interfaces.set('bsl0', new networkInterface('bsl0', 'Bluetooth Network'));
+	this.interfaces.set('usb0', new networkInterface('usb0', 'USB'));
+	this.interfaces.set('eth0', new networkInterface('eth0', 'Wireless'));
+	this.interfaces.set('bsl0', new networkInterface('bsl0', 'Bluetooth'));
 			
 }
 
@@ -41,7 +41,7 @@ networkInterfaces.prototype.getListObjects = function() {
 		 * XXX: Dirty hack!
 		 */
 		if (iname[i]=='ppp0')
-			this.interfaces.get(iname[i]).description = carrier + ' Network';
+			this.interfaces.get(iname[i]).description = carrier;
 		returnArray.push(this.interfaces.get(iname[i]).getListObject());
 	}
 	
