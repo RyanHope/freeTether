@@ -144,7 +144,7 @@ MainAssistant.prototype.toggleChanged = function(event) {
       if (event.value) {
         this.ftservice.addInterface({
           wifi: {
-            SSID:"WebOS Testing",
+            SSID: "WebOS Testing",
             Security: "Open",
             interfaceIdleTimeout: true
           }

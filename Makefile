@@ -46,6 +46,7 @@ run: install
 	palm-launch ${APP_ID}
 
 put-svc:
+	novacom run 'file:///usr/bin/killall -9 ${APP_ID}' || true
 	novacom put file:///var/usr/sbin/${APP_ID} < src/freetether
 
 clobber:

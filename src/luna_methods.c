@@ -2,6 +2,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <malloc.h>
+#include <syslog.h>
 #include "luna_methods.h"
 #include "luna_service.h"
 
@@ -77,7 +78,7 @@ bool interfaceRemove(LSHandle *sh, LSMessage *msg, void *ctx) {
   object = json_parse_document(LSMessageGetPayload(msg));
   type = object->child->text;
 
-  printf("type %s\n", type);
+  syslog(LOG_DEBUG, "type %s\n", type);
   if (!type) {
     LSMessageReply(sh, msg, "{\"returnValue\":true, \"errorCode\":-1, \"errorText\": \"No Interface type specified\"}", &lserror);
     return true;
@@ -108,7 +109,7 @@ bool interfaceAdd(LSHandle *sh, LSMessage *msg, void *ctx) {
 
   object = json_parse_document(LSMessageGetPayload(msg));
   type = object->child->text;
-  printf("type %s\n", type);
+  syslog(LOG_DEBUG, "type %s\n", type);
   if (!type) {
     LSMessageReply(sh, msg, "{\"returnValue\":true, \"errorCode\":-1, \"errorText\": \"No Interface type specified\"}", &lserror);
     return true;
@@ -119,9 +120,11 @@ bool interfaceAdd(LSHandle *sh, LSMessage *msg, void *ctx) {
     char *security = NULL;
     char *passphrase = NULL;
     char *payload = NULL;
-    json_get_string(object, "SSID", &ssid);
-    json_get_string(object, "Security", &security);
-    json_get_string(object, "Passphrase", &passphrase);
+    json_t *wifi = json_find_first_label(object, "wifi");
+    json_get_string(wifi->child, "SSID", &ssid);
+    json_get_string(wifi->child, "Security", &security);
+    json_get_string(wifi->child, "Passphrase", &passphrase);
+    syslog(LOG_DEBUG, "ssid %s, security %s, passphrase %s\n", ssid, security, passphrase);
     if (!ssid) {
       LSMessageReply(sh, msg, "{\"returnValue\":true, \"errorCode\":-1, \"errorText\": \"No SSID supplied\"}", &lserror);
       return true;
@@ -132,13 +135,16 @@ bool interfaceAdd(LSHandle *sh, LSMessage *msg, void *ctx) {
     }
     strcpy(iface, "uap0");
     LSCall(priv_serviceHandle, "palm://com.palm.wifi/setstate", "{\"state\": \"disabled\"}", NULL, NULL, NULL, &lserror);
-    printf("ssid %s, security %s, passphrase %s\n", ssid, security, passphrase);
     asprintf(&payload, "{\"SSID\": \"%s\", \"Security\": \"%s\"", ssid, security);
     if (passphrase /* && not Open */) {
       asprintf(&payload, "%s, \"Passphrase\": %s", payload, passphrase);
     }
     asprintf(&payload, "%s}", payload);
     LSCall(priv_serviceHandle, "palm://com.palm.wifi/createAP", payload, NULL, NULL, NULL, &lserror);
+    // TODO: MUST bring up uap0 but can't until createAP is finished loading in the AP module, so the rest of this stuff must happen in the callback, which will have ifname: uap0 in the payload
+    // at 4AM we do lazy hacks
+    sleep(2);
+    system("ifconfig uap0 up");
   }
   else if (!strcmp(type, "bluetooth")) {
     json_get_string(object, "ifname", &iface);
