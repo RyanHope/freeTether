@@ -11,16 +11,17 @@
 #error Must define APP_ID macro
 #endif
 
-#ifndef DEBUG
-#define DEBUG 0
-#endif
-
 struct iface_info ifaceInfo;
 
-static void sys_info_init() {
-  memset(&ifaceInfo, 0, sizeof(ifaceInfo));
-  pthread_mutex_init(&ifaceInfo.mutex, NULL); 
-  pthread_cond_init (&ifaceInfo.state_change, NULL);
+static int sys_info_init() {
+  int ret = 1;
+  ifaceInfo = 0;
+  if (memset(&ifaceInfo, 0, sizeof(ifaceInfo))) {
+    pthread_mutex_init(&ifaceInfo.mutex, NULL);
+    pthread_cond_init (&ifaceInfo.state_change, NULL);
+    ret = 0;
+  }
+  return ret;
 }
 
 static void *iface_thread(void *arg) {
@@ -51,19 +52,19 @@ int setupTmpDir() {
   char *d = mkdtemp(template);
 
   if (d==NULL) {
-    if (DEBUG) syslog(LOG_ERR, "Failed creating tmp directory %s", template);
+    syslog(LOG_ERR, "Failed creating tmp directory %s", template);
     return 1;
   } else {
     tmpDir = strdup(d);
     syslog(LOG_INFO, "Temporary directory %s created", tmpDir);
     if (mount("/dev/null", IP_FORWARD, NULL, MS_BIND, NULL)) {
-      if (DEBUG) syslog(LOG_ERR, "Failed binding %s to %s", tmpIPforwardPath, IP_FORWARD);
+      syslog(LOG_ERR, "Failed binding %s to %s", tmpIPforwardPath, IP_FORWARD);
       return 1;
     } else {
       syslog(LOG_INFO, "Procfs now available at %s", tmpDir);
       tmpIPforwardPath = 0;
       if (asprintf(&tmpIPforwardPath,"%s/sys/net/ipv4/ip_forward",tmpDir) == -1) {
-        if (DEBUG) syslog(LOG_ERR, "Failed creating tmp ip_forward path");
+        syslog(LOG_ERR, "Failed creating tmp ip_forward path");
         return 1;
       }
     }
@@ -74,10 +75,6 @@ int setupTmpDir() {
 }
 
 int main(int argc, char **argv) {
-  pthread_t tid;
-
-  sys_info_init();
-  pthread_create(&tid, NULL, iface_thread, NULL);
 
   signal(SIGINT, sighandler);
   signal(SIGTERM, sighandler);
@@ -87,10 +84,12 @@ int main(int argc, char **argv) {
 
   openlog(APP_ID, LOG_PID, LOG_USER);
 
-  setupTmpDir();
+  pthread_t iface_tid;
 
-  if (luna_service_initialize(APP_ID))
+  if (!setupTmpDir() && !sys_info_init() && luna_service_initialize(APP_ID)) {
+    pthread_create(&iface_tid, NULL, iface_thread, NULL);
     luna_service_start();
+  }
 
   return 0;
 }
