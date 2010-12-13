@@ -1,7 +1,7 @@
 export APP_ID=$(shell grep id appinfo.json | cut -d\" -f4)
 VERSION=$(shell grep version appinfo.json | cut -d\" -f4)
 
-.PHONY: service run clobber
+.PHONY: service package run clobber
 
 all: service package
 
