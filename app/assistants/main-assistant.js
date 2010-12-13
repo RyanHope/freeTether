@@ -26,7 +26,7 @@ MainAssistant.prototype.setup = function() {
   			fieldName:  'tetherWiFi'
 		},
 		{
-			value : this.prefs.tetherWifi,
+			value : this.prefs.tetherWiFi,
  			disabled: false
 		}
 	);
@@ -78,6 +78,12 @@ MainAssistant.prototype.setup = function() {
 			]
 		}
 	);
+	
+	this.toggleChangeHandler = this.toggleChanged.bindAsEventListener(this);
+	
+	this.controller.listen('tetherWiFi', Mojo.Event.propertyChange, this.toggleChangeHandler);
+	this.controller.listen('tetherBT', Mojo.Event.propertyChange, this.toggleChangeHandler);
+	this.controller.listen('tetherUSB', Mojo.Event.propertyChange, this.toggleChangeHandler);
 	 
 };
 
@@ -118,6 +124,11 @@ MainAssistant.prototype.handleCommand = function(event) {
 			
 	}
 	
+}
+
+MainAssistant.prototype.toggleChanged = function(event) {
+	this.prefs[event.target.id] = event.value;
+	this.cookie.put(this.prefs);
 }
 
 MainAssistant.prototype.activate = function(event) {

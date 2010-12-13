@@ -19,7 +19,20 @@ preferenceCookie.prototype.get = function(reload)
 				
 			};
 			
-			this.put(this.prefs);
+			// uncomment to delete cookie for testing
+			//this.cookie.remove();
+			var cookieData = this.cookie.get();
+			if (cookieData) 
+			{
+				for (i in cookieData) 
+				{	
+					this.prefs[i] = cookieData[i];
+				}
+			}
+			else 
+			{
+				this.put(this.prefs);
+			}
 
 		}
 		
