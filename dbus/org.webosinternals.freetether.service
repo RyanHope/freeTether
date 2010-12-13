@@ -1,4 +1,4 @@
 [D-BUS Service]
 Name=org.webosinternals.freetether
-Exec=/var/usr/sbin/org.webosinternals.freetether
+Exec=/media/cryptofs/apps/usr/palm/applications/org.webosinternals.freetether/bin/org.webosinternals.freetether
 Type=dynamic

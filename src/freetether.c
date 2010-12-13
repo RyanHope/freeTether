@@ -63,6 +63,10 @@ int main(int argc, char **argv) {
 	signal(SIGHUP, sighandler);
 	signal(SIGKILL, sighandler);
 
+	openlog(APP_ID, LOG_PID, LOG_USER);
+
+	setupTmpDir();
+
 	if (luna_service_initialize(APP_ID))
 		luna_service_start();
 
