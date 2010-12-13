@@ -3,6 +3,7 @@ function MainAssistant() {
 	this.cookie = new preferenceCookie();
   this.hotspotservice = new HotspotMojoService();
 	this.prefs = this.cookie.get();
+  this.statusSubscription = null;
 	
 }
 
@@ -138,6 +139,8 @@ MainAssistant.prototype.toggleChanged = function(event) {
 	this.cookie.put(this.prefs);
   switch(event.target.id) {
     case 'tetherWiFi':
+      if (!this.statusSubscription)
+        this.statusSubscription = this.hotspotservice.getStatus({"subscribe":true},f);
       if (event.value) {
         this.hotspotservice.addInterface({
           wifi: {

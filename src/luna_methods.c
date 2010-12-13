@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <string.h>
+#include <malloc.h>
 #include "luna_methods.h"
 #include "luna_service.h"
 
@@ -10,8 +11,11 @@ bool hotspot_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
   LSError lserror;
   LSErrorInit(&lserror);
 
-  LSMessageReply(priv_serviceHandle, (LSMessage *)ctx, LSMessageGetPayload(msg), &lserror);
-  LSMessageUnref((LSMessage *)ctx);
+  LSMessageRespond((LSMessage *)ctx, LSMessageGetPayload(msg), &lserror);
+
+  if (!LSMessageIsSubscription((LSMessage *)ctx))
+    LSMessageUnref((LSMessage *)ctx);
+
   return true;
 }
 

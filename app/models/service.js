@@ -24,4 +24,16 @@ var HotspotMojoService = Class.create({
     return request;
   },
 
+  getStatus: function(param, callback) {
+    var request = new Mojo.Service.Request('palm://org.webosinternals.freetether', {
+      method: 'sysInfo',
+      parameters: param,
+      onSuccess: callback,
+      onFailure: callback
+    });
+
+    return request;
+  },
+
+
 });
