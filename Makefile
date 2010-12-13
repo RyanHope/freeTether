@@ -5,12 +5,12 @@ IPKG=${APP_ID}_${VERSION}-${META_VERSION}_arm.ipk
 
 .PHONY: install run clobber clean
 
-all: service package
+all: package
 
 service:
 	$(MAKE) -C src
 
-${IPKG}: build/arm/CONTROL/control
+${IPKG}: service build/arm/CONTROL/control
 	cp control/* build/arm/CONTROL/
 	mkdir -p build/arm/usr/palm/applications/${APP_ID}
 	cp -r app build/arm/usr/palm/applications/${APP_ID}
@@ -39,11 +39,14 @@ build/%/CONTROL/control:
 
 package: ${IPKG}
 
-install: ${IPKG}
+install:
 	palm-install ${IPKG}
 
 run: install
 	palm-launch ${APP_ID}
+
+put-svc:
+	novacom put file:///var/usr/sbin/${APP_ID} < src/freetether
 
 clobber:
 	$(MAKE) -C src clobber

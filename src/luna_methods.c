@@ -5,7 +5,9 @@
 #include "luna_methods.h"
 #include "luna_service.h"
 
-#define MOBILE_HOTSPOT "luna://com.palm.mobilehotspot"
+#define DBUS_MOBILE_HOTSPOT "luna://com.palm.mobilehotspot"
+#define DBUS_NETROUTE "luna://com.palm.netroute"
+#define DBUS_DHCP "luna://com.palm.dhcp"
 
 bool hotspot_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
   LSError lserror;
@@ -23,20 +25,10 @@ void hotspot_relay(LSMessage *msg, char *method) {
   LSError lserror;
   LSErrorInit(&lserror);
   LSMessageRef(msg);
-  char *uri = malloc(strlen(MOBILE_HOTSPOT) + strlen("/") + strlen(method));
+  char *uri = malloc(strlen(DBUS_MOBILE_HOTSPOT) + strlen("/") + strlen(method) + 1);
 
-  sprintf(uri, "%s/%s", MOBILE_HOTSPOT, method);
+  sprintf(uri, "%s/%s", DBUS_MOBILE_HOTSPOT, method);
   LSCall(priv_serviceHandle, uri, LSMessageGetPayload(msg), hotspot_callback, (void *)msg, NULL, &lserror);
-}
-
-bool interfaceAdd(LSHandle *sh, LSMessage *msg, void *ctx) {
-  hotspot_relay(msg, "interfaceAdd");
-  return true;
-}
-
-bool interfaceRemove(LSHandle *sh, LSMessage *msg, void *ctx) {
-  hotspot_relay(msg, "interfaceRemove");
-  return true;
 }
 
 bool sysInfo(LSHandle *sh, LSMessage *msg, void *ctx) {
@@ -71,6 +63,120 @@ bool version(LSHandle *sh, LSMessage *msg, void *ctx) {
   LSMessageReply(sh, msg, "{\"returnValue:\": true}", &lserror);
   return true;
 }
+
+// Hey man, what kind of hogwash crap stuffed together code is this?
+// it's 3 AM leave me alone!
+
+bool interfaceRemove(LSHandle *sh, LSMessage *msg, void *ctx) {
+  LSError lserror;
+  LSErrorInit(&lserror);
+  json_t *object;
+  char *type = NULL;
+  char *iface = NULL;
+
+  object = json_parse_document(LSMessageGetPayload(msg));
+  type = object->child->text;
+
+  printf("type %s\n", type);
+  if (!type) {
+    LSMessageReply(sh, msg, "{\"returnValue\":true, \"errorCode\":-1, \"errorText\": \"No Interface type specified\"}", &lserror);
+    return true;
+  }
+
+  if (!strcmp(type, "wifi")) {
+    LSCall(priv_serviceHandle, "palm://com.palm.wifi/deleteAP", "{\"ifname\":\"uap0\"}", NULL, NULL, NULL, &lserror);
+    LSCall(priv_serviceHandle, "palm://com.palm.wifi/setstate", "{\"state\":\"enabled\"}", NULL, NULL, NULL, &lserror);
+  }
+
+  // Only finalize and remove if there are no additional interfaces active
+  LSCall(priv_serviceHandle, "palm://com.palm.dhcp/interfaceFinalize", "{\"interface\":\"bridge1\"}", NULL, NULL, NULL, &lserror);
+  LSCall(priv_serviceHandle, "palm://com.palm.netroute/removeNetIf", "{\"ifName\":\"bridge1\"}", NULL, NULL, NULL, &lserror);
+
+  LSMessageReply(sh, msg, "{\"returnValue\":true}", &lserror);
+
+  return true;
+}
+
+bool interfaceAdd(LSHandle *sh, LSMessage *msg, void *ctx) {
+  LSError lserror;
+  LSErrorInit(&lserror);
+  char *type = NULL;
+  char iface[10];
+  char command[80];
+  json_t *object;
+  char *uri = NULL;
+
+  object = json_parse_document(LSMessageGetPayload(msg));
+  type = object->child->text;
+  printf("type %s\n", type);
+  if (!type) {
+    LSMessageReply(sh, msg, "{\"returnValue\":true, \"errorCode\":-1, \"errorText\": \"No Interface type specified\"}", &lserror);
+    return true;
+  }
+
+  if (!strcmp(type, "wifi")) {
+    char *ssid = NULL;
+    char *security = NULL;
+    char *passphrase = NULL;
+    char *payload = NULL;
+    json_get_string(object, "SSID", &ssid);
+    json_get_string(object, "Security", &security);
+    json_get_string(object, "Passphrase", &passphrase);
+    if (!ssid) {
+      LSMessageReply(sh, msg, "{\"returnValue\":true, \"errorCode\":-1, \"errorText\": \"No SSID supplied\"}", &lserror);
+      return true;
+    }
+    if (!security) {
+      security = malloc(strlen("Open") + 1);
+      strcpy(security, "Open");
+    }
+    strcpy(iface, "uap0");
+    LSCall(priv_serviceHandle, "palm://com.palm.wifi/setstate", "{\"state\": \"disabled\"}", NULL, NULL, NULL, &lserror);
+    printf("ssid %s, security %s, passphrase %s\n", ssid, security, passphrase);
+    asprintf(&payload, "{\"SSID\": \"%s\", \"Security\": \"%s\"", ssid, security);
+    if (passphrase /* && not Open */) {
+      asprintf(&payload, "%s, \"Passphrase\": %s", payload, passphrase);
+    }
+    asprintf(&payload, "%s}", payload);
+    LSCall(priv_serviceHandle, "palm://com.palm.wifi/createAP", payload, NULL, NULL, NULL, &lserror);
+  }
+  else if (!strcmp(type, "bluetooth")) {
+    json_get_string(object, "ifname", &iface);
+    // Subscribe to com.palm.bluetooth/pan/subscribenotifications
+  }
+  else if (!strcmp(type, "usb")) {
+    json_get_string(object, "ifname", &iface);
+  }
+  else {
+    LSMessageReply(sh, msg, "{\"returnValue\":true, \"errorCode\":-1, \"errorText\": \"Invalid Interface type specified\"}", &lserror);
+    return true;
+  }
+
+  if (!iface) {
+    LSMessageReply(sh, msg, "{\"returnValue\":true, \"errorCode\":-1, \"errorText\": \"Invalid ifname specified\"}", &lserror);
+    return true;
+  }
+
+  // TODO: Use libnetbridge directly
+  system("brctl addbr bridge1");
+  sprintf(command, "brctl addif bridge1 %s", iface);
+  system(command);
+
+
+  // TODO: callbacks, return values, error checking
+  uri = malloc(strlen(DBUS_NETROUTE) + strlen("/addNetIf") + 1);
+  sprintf(uri, "%s/addNetIf", DBUS_NETROUTE);
+  LSCall(priv_serviceHandle, uri, "{\"ifName\":\"bridge1\", \"networkUsage\":[\"private\"], \"networkTechnology\":\"unknown\", \"networkScope\":\"lan\", \"ipv4\":{\"ip\":\"0x0b01020a\", \"netmask\":\"0x00ffffff\", \"gateway\":\"0x0b02010a\"}}", NULL, NULL, NULL, &lserror);
+
+  uri = realloc(uri, strlen(DBUS_DHCP) + strlen("/interfaceInitialize") + 1);
+  sprintf(uri, "%s/interfaceInitialize", DBUS_DHCP);
+  LSCall(priv_serviceHandle, uri, "{\"interface\":\"bridge1\", \"mode\":\"server\", \"ipv4Address\":\"10.1.2.11\", \"ipv4Subnet\":\"255.255.255.0\", \"ipv4Router\":\"10.1.2.11\", \"dnsServers\":[\"10.1.2.11\"], \"ipv4RangeStart\":\"10.1.2.70\", \"maxLeases\":15, \"leaseTime\":7200}", NULL, NULL, NULL, &lserror);
+
+  LSMessageReply(sh, msg, "{\"returnValue\":true}", &lserror);
+
+  return true;
+}
+
 
 LSMethod luna_methods[] = { 
   {"version", version},

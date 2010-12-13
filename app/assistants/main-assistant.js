@@ -1,7 +1,7 @@
 function MainAssistant() {
 
 	this.cookie = new preferenceCookie();
-  this.hotspotservice = new HotspotMojoService();
+  this.ftservice = new FreeTetherService();
 	this.prefs = this.cookie.get();
   this.statusSubscription = null;
 	
@@ -139,10 +139,10 @@ MainAssistant.prototype.toggleChanged = function(event) {
 	this.cookie.put(this.prefs);
   switch(event.target.id) {
     case 'tetherWiFi':
-      if (!this.statusSubscription)
-        this.statusSubscription = this.hotspotservice.getStatus({"subscribe":true},f);
+      //if (!this.statusSubscription)
+        //this.statusSubscription = this.ftservice.getStatus({"subscribe":true},f);
       if (event.value) {
-        this.hotspotservice.addInterface({
+        this.ftservice.addInterface({
           wifi: {
             SSID:"WebOS Testing",
             Security: "Open",
@@ -151,7 +151,7 @@ MainAssistant.prototype.toggleChanged = function(event) {
         }, f);
       }
       else {
-        this.hotspotservice.removeInterface({
+        this.ftservice.removeInterface({
           wifi: {
             SSID:"WebOS Testing",
           }

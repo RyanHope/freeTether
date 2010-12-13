@@ -1,4 +1,4 @@
-var HotspotMojoService = Class.create({
+var FreeTetherService = Class.create({
   initialize: function() {
   },
 
