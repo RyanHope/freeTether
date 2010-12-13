@@ -3,7 +3,7 @@ var HotspotMojoService = Class.create({
   },
 
   addInterface: function(param, callback) {
-    var request = new Mojo.Service.Request('palm://com.palm.mobilehotspot', {
+    var request = new Mojo.Service.Request('palm://org.webosinternals.freetether', {
       method: 'interfaceAdd',
       parameters: param,
       onSuccess: callback,
@@ -14,7 +14,7 @@ var HotspotMojoService = Class.create({
   },
 
   removeInterface: function(param, callback) {
-    var request = new Mojo.Service.Request('palm://com.palm.mobilehotspot', {
+    var request = new Mojo.Service.Request('palm://org.webosinternals.freetether', {
       method: 'interfaceRemove',
       parameters: param,
       onSuccess: callback,
