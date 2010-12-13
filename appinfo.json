@@ -1,0 +1,10 @@
+{
+	"id": "org.webosinternals.freetether",
+	"version": "1.0.0",
+	"vendor": "webOS-Internals",
+	"type": "web",
+	"main": "index.html",
+	"title": "freeTether",
+	"icon": "icon.png",
+	"theme": "dark"
+}
