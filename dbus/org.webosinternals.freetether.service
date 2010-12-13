@@ -1,0 +1,4 @@
+[D-BUS Service]
+Name=org.webosinternals.freetether
+Exec=/var/usr/sbin/org.webosinternals.freetether
+Type=dynamic

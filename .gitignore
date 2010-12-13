@@ -5,3 +5,5 @@
 *.o
 *.ipk
 src/freetether
+build
+ipkgs

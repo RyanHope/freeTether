@@ -1,0 +1,41 @@
+#!/bin/sh
+
+PID="org.webosinternals.freetether"
+UINPUT="org.webosinternals.modules.uinput"
+
+# Handle execution as pmPostInstall.script
+if [ -z "$IPKG_OFFLINE_ROOT" ]; then
+  IPKG_OFFLINE_ROOT=/media/cryptofs/apps
+  mount -o remount,rw /
+fi
+
+APPS=/media/cryptofs/apps
+
+[ -d $APPS ] || { echo "Requires webOS 1.3.5 or later" ; exit 1 ; }
+
+# Stop the service if running
+/usr/bin/killall -9 ${PID} || true
+
+# Remove the freetether executable
+rm -f /var/usr/sbin/${PID}
+
+# Remove the ls2 roles
+rm -f /var/palm/ls2/roles/pub/${PID}.json
+rm -f /var/palm/ls2/roles/prv/${PID}.json
+
+# Install the freetether executable
+mkdir -p /var/usr/sbin/
+install -m 755 $APPS/usr/palm/applications/${PID}/bin/${PID} /var/usr/sbin/${PID}
+
+# Install the dbus service
+mkdir -p /var/palm/system-services
+cp $APPS/usr/palm/applications/${PID}/dbus/${PID}.service /var/palm/system-services/${PID}.service
+
+# Install the ls2 roles
+if [ -d /var/palm/ls2/roles ]; then
+  cp $APPS/usr/palm/applications/${PID}/dbus/${PID}.json /var/palm/ls2/roles/prv/${PID}.json
+  cp $APPS/usr/palm/applications/${PID}/dbus/${PID}.json /var/palm/ls2/roles/pub/${PID}.json
+  /usr/bin/ls-control scan-services || true
+fi
+
+exit 0
