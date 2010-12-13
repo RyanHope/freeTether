@@ -3,6 +3,11 @@
 
 #include <pthread.h>
 
+#define IP_FORWARD "/proc/sys/net/ipv4/ip_forward"
+
+char *tmpDir;
+char *tmpIPforwardPath;
+
 typedef enum {
   ASSIGN_REQUESTED,
   ASSIGNED,
