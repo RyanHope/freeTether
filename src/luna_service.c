@@ -38,5 +38,6 @@ void luna_service_start() {
   LSError lserror;
   LSErrorInit(&lserror);
 
+  start_subscriptions();
   g_main_loop_run(loop);
 }

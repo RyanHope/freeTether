@@ -1,7 +1,6 @@
 #!/bin/sh
 
 PID="org.webosinternals.freetether"
-UINPUT="org.webosinternals.modules.uinput"
 
 # Handle execution as pmPostInstall.script
 if [ -z "$IPKG_OFFLINE_ROOT" ]; then
