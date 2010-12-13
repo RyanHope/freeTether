@@ -1,6 +1,7 @@
 function MainAssistant() {
 
 	this.cookie = new preferenceCookie();
+  this.hotspotservice = new HotspotMojoService();
 	this.prefs = this.cookie.get();
 	
 }
@@ -127,8 +128,34 @@ MainAssistant.prototype.handleCommand = function(event) {
 }
 
 MainAssistant.prototype.toggleChanged = function(event) {
+  var f = function(payload) {
+    for (p in payload) {
+      Mojo.Log.error(p + " : " + payload[p]);
+    }
+  };
+
 	this.prefs[event.target.id] = event.value;
 	this.cookie.put(this.prefs);
+  switch(event.target.id) {
+    case 'tetherWiFi':
+      if (event.value) {
+        this.hotspotservice.addInterface({
+          wifi: {
+            SSID:"WebOS Testing",
+            Security: "Open",
+            interfaceIdleTimeout: true
+          }
+        }, f);
+      }
+      else {
+        this.hotspotservice.removeInterface({
+          wifi: {
+            SSID:"WebOS Testing",
+          }
+        }, f);
+      }
+      break;
+  }
 }
 
 MainAssistant.prototype.activate = function(event) {

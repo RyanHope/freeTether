@@ -1,5 +1,6 @@
 [
     {"source": "app/assistants/stage-assistant.js"},
+    {"source": "app/models/service.js"},
     {"source": "app/models/cookie.js"},
     {
         "scenes": "main",
