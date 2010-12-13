@@ -5,12 +5,12 @@ IPKG=${APP_ID}_${VERSION}-${META_VERSION}_arm.ipk
 
 .PHONY: install run clobber clean
 
-all: package
+all: service package
 
 service:
 	$(MAKE) -C src
 
-${IPKG}: service build/arm/CONTROL/control
+${IPKG}: build/arm/CONTROL/control
 	cp control/* build/arm/CONTROL/
 	mkdir -p build/arm/usr/palm/applications/${APP_ID}
 	cp -r app build/arm/usr/palm/applications/${APP_ID}
@@ -31,7 +31,7 @@ build/%/CONTROL/control:
 	@echo "Package: ${APP_ID}" > $@
 	@echo "Version: ${VERSION}-${META_VERSION}" >> $@
 	@echo "Architecture: arm" >> $@
-	@echo "Maintainer: Ryan Hope <rmh3093@gmail.com>, Eric J Gaudet <emoney_33@yahoo.com>" >> $@
+	@echo "Maintainer: Ryan Hope <rmh3093@gmail.com>, Eric Gaudet <emoney_33@yahoo.com>" >> $@
 	@echo "Description: freeTether" >> $@
 	@echo "Section: System Utilities" >> $@
 	@echo "Priority: optional" >> $@
