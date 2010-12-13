@@ -57,22 +57,27 @@ MainAssistant.prototype.setup = function() {
 		}
 	);
 
-	this.menuModel = {
-		visible:true,
-		items: [
-			{},
-			{label:$L('Views'), 
-			toggleCmd:'mainOptions', 
-			items:[
-				{label:$L('Main'), icon:'icon-switch', command:'mainOptions'}, 
-				{label:$L('WiFi'), icon:'icon-wifi', command:'wifiOptions'},
-				{label:$L('BT'),  icon:'icon-bt', command:'btOptions'},
-				{label:$L('USB'), icon:'icon-usb', command:'usbOptions'}
-			]},
-			{},
-		]
-	};
-	this.controller.setupWidget(Mojo.Menu.commandMenu, undefined, this.menuModel);
+	this.controller.setupWidget(
+		Mojo.Menu.commandMenu,
+		{
+			menuClass: 'no-fade'
+		},
+		{
+			visible:true,
+			items: [
+				{},
+				{label:$L('Views'), 
+				toggleCmd:'mainOptions',
+				items:[
+					{label:$L('Main'), icon:'icon-switch', command:'mainOptions'}, 
+					{label:$L('WiFi'), icon:'icon-wifi', command:'wifiOptions'},
+					{label:$L('BT'),  icon:'icon-bt', command:'btOptions'},
+					{label:$L('USB'), icon:'icon-usb', command:'usbOptions'}
+				]},
+				{},
+			]
+		}
+	);
 	 
 };
 
