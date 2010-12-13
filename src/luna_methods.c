@@ -10,7 +10,7 @@ bool hotspot_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
   LSError lserror;
   LSErrorInit(&lserror);
 
-  LSMessageReply(sh, (LSMessage *)ctx, LSMessageGetPayload(msg), &lserror);
+  LSMessageReply(priv_serviceHandle, (LSMessage *)ctx, LSMessageGetPayload(msg), &lserror);
   LSMessageUnref((LSMessage *)ctx);
   return true;
 }
