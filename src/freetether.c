@@ -12,6 +12,8 @@
 #endif
 
 struct iface_info ifaceInfo;
+char *tmpDir;
+char *tmpIPforwardPath;
 
 static int sys_info_init() {
   int ret = 1;
