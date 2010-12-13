@@ -30,43 +30,36 @@ void hotspot_relay(LSMessage *msg, char *method) {
 }
 
 bool interfaceAdd(LSHandle *sh, LSMessage *msg, void *ctx) {
-  LSMessageRef(msg);
   hotspot_relay(msg, "interfaceAdd");
   return true;
 }
 
 bool interfaceRemove(LSHandle *sh, LSMessage *msg, void *ctx) {
-  LSMessageRef(msg);
   hotspot_relay(msg, "interfaceRemove");
   return true;
 }
 
 bool sysInfo(LSHandle *sh, LSMessage *msg, void *ctx) {
-  LSMessageRef(msg);
   hotspot_relay(msg, "sysInfo");
   return true;
 }
 
 bool clientList(LSHandle *sh, LSMessage *msg, void *ctx) {
-  LSMessageRef(msg);
   hotspot_relay(msg, "clientList");
   return true;
 }
 
 bool configRead(LSHandle *sh, LSMessage *msg, void *ctx) {
-  LSMessageRef(msg);
   hotspot_relay(msg, "configRead");
   return true;
 }
 
 bool configWrite(LSHandle *sh, LSMessage *msg, void *ctx) {
-  LSMessageRef(msg);
   hotspot_relay(msg, "configWrite");
   return true;
 }
 
 bool deauthclient(LSHandle *sh, LSMessage *msg, void *ctx) {
-  LSMessageRef(msg);
   hotspot_relay(msg, "deauthclient");
   return true;
 }
