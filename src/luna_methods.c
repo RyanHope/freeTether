@@ -143,16 +143,16 @@ bool netif_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
     pthread_mutex_unlock(&ifaceInfo.mutex);
 
     // TODO: less hard coding
-    LSCall(priv_serviceHandle, "com.palm.dhcp/interfaceInitialize", "{\
-          \"interface\":\"bridge1\", \
-          \"mode\":\"server\", \
-          \"ipv4Address\":\"10.1.2.11\", \
-          \"ipv4Subnet\":\"255.255.255.0\", \
-          \"ipv4Router\":\"10.1.2.11\", \
-          \"dnsServers\":[\"10.1.2.11\"], \
-          \"ipv4RangeStart\":\"10.1.2.50\", \
-          \"maxLeases\":15, \
-          \"leaseTime\":7200}", 
+    LSCall(priv_serviceHandle, "luna://com.palm.dhcp/interfaceInitialize", "{ " \
+          "\"interface\":\"bridge1\", "\
+          "\"mode\":\"server\", "\
+          "\"ipv4Address\":\"10.1.2.11\", "\
+          "\"ipv4Subnet\":\"255.255.255.0\", "\
+          "\"ipv4Router\":\"10.1.2.11\", "\
+          "\"dnsServers\":[\"10.1.2.11\"], "\
+          "\"ipv4RangeStart\":\"10.1.2.50\", "\
+          "\"maxLeases\":15, "\
+          "\"leaseTime\":7200}", 
           dhcp_callback, NULL, NULL, &lserror);
 
 
@@ -171,6 +171,15 @@ void add_bridge(struct interface *iface) {
   syslog(LOG_DEBUG, "add bridge %d\n", ret);
   ret = br_add_interface("bridge1", iface->ifname);
   syslog(LOG_DEBUG, "add interface %d\n", ret);
+
+  system("brctl addbr bridge1");
+  char command[80];
+  sprintf(command, "brctl addif bridge1 %s", iface->ifname);
+  system(command);
+
+  // Have to up at least for uap0 it seems
+  sprintf(command, "ifconfig %s up", iface->ifname);
+  system(command);
 
   pthread_mutex_lock(&iface->mutex);
   iface->bridge_state = BRIDGED;
@@ -222,7 +231,8 @@ bool iface_status_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
       pthread_mutex_lock(&iface->mutex);
       iface->link_state = link_state;
       pthread_mutex_unlock(&iface->mutex);
-      add_bridge(iface);
+      if (link_state == UP && iface->bridge_state != BRIDGED)
+        add_bridge(iface);
     }
   }
 
@@ -237,7 +247,6 @@ bool create_ap_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
   bool ret = false;
   char *ifname = NULL;
 
-  syslog(LOG_DEBUG, "ap callback");
   object = json_parse_document(LSMessageGetPayload(msg));
   json_get_bool(object, "returnValue", &ret);
 
@@ -245,7 +254,6 @@ bool create_ap_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
     json_get_string(object, "ifname", &ifname);
     iface = get_requested_iface();
 
-    syslog(LOG_DEBUG, "iface %p, ifname %s", iface, ifname);
     if (iface && ifname) {
       pthread_mutex_lock(&ifaceInfo.ifaces[0].mutex);
       iface->ifname = malloc(strlen(ifname) + 1);
@@ -272,7 +280,6 @@ bool interfaceRemove(LSHandle *sh, LSMessage *msg, void *ctx) {
   object = json_parse_document(LSMessageGetPayload(msg));
   type = object->child->text;
 
-  syslog(LOG_DEBUG, "type %s\n", type);
   if (!type) {
     LS_REPLY_ERROR("No Interface type specified");
     return true;
@@ -376,7 +383,6 @@ bool interfaceAdd(LSHandle *sh, LSMessage *msg, void *ctx) {
   // payload's first label is the type which can be wifi, bluetooth or usb
   object = json_parse_document(LSMessageGetPayload(msg));
   type = object->child->text;
-  syslog(LOG_DEBUG, "type %s\n", type);
   if (!type) {
     LS_REPLY_ERROR("No Interface type specified");
     return true;
@@ -392,7 +398,6 @@ bool interfaceAdd(LSHandle *sh, LSMessage *msg, void *ctx) {
     json_get_string(wifi->child, "SSID", &ssid);
     json_get_string(wifi->child, "Security", &security);
     json_get_string(wifi->child, "Passphrase", &passphrase);
-    syslog(LOG_DEBUG, "ssid %s, security %s, passphrase %s\n", ssid, security, passphrase);
 
     if (!ssid) {
       LS_REPLY_ERROR("No SSID supplied");

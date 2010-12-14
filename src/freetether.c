@@ -30,15 +30,6 @@ static int sys_info_init() {
   return 0;
 }
 
-static void *iface_thread(void *arg) {
-  while (1) {
-    pthread_cond_wait(&ifaceInfo.state_change, &ifaceInfo.mutex);
-    pthread_mutex_unlock(&ifaceInfo.mutex);
-  }
-
-  return NULL;
-}
-
 void cleanup() {
   ip_forward_cleanup();
 }
@@ -49,6 +40,7 @@ void sighandler(int sig) {
 }
 
 int main(int argc, char **argv) {
+  pthread_t ipmon_tid;
 
   signal(SIGINT, sighandler);
   signal(SIGTERM, sighandler);
@@ -58,11 +50,7 @@ int main(int argc, char **argv) {
 
   openlog(APP_ID, LOG_PID, LOG_USER);
 
-  pthread_t iface_tid;
-  pthread_t ipmon_tid;
-
   if (!setupTmpDir() && !sys_info_init() && luna_service_initialize(APP_ID)) {
-    pthread_create(&iface_tid, NULL, iface_thread, NULL);
     pthread_create(&ipmon_tid, NULL, ipmon_thread, NULL);
     luna_service_start();
   }
