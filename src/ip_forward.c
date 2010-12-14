@@ -53,25 +53,29 @@ int setupTmpDir() {
 
 }
 
-bool get_ip_forward(LSHandle* lshandle, LSMessage *message, void *ctx) {
-
-  LSError lserror;
-  LSErrorInit(&lserror);
-
+int get_ip_forward_state() {
   FILE *fp;
-  int len = 0, state = -1;
-
+  int state = -1;
   fp = fopen(tmpIPforwardPath, "r");
   if (fp) {
     state = fgetc(fp);
     fclose(fp);
   }
+  return state;
+}
+
+bool get_ip_forward(LSHandle* lshandle, LSMessage *message, void *ctx) {
+
+  LSError lserror;
+  LSErrorInit(&lserror);
+
+  int len = 0;
 
   bool subscribed = false;
   LSSubscriptionProcess(lshandle,message,&subscribed,&lserror);
 
   char *tmp = 0;
-  len = asprintf(&tmp, "{\"returnValue\":true,\"state\":%c}", (char)state);
+  len = asprintf(&tmp, "{\"returnValue\":true,\"state\":%c}", (char)get_ip_forward_state());
   if (tmp)
     LSMessageReply(lshandle,message,tmp,&lserror);
   else
@@ -86,14 +90,9 @@ bool get_ip_forward(LSHandle* lshandle, LSMessage *message, void *ctx) {
 
 }
 
-bool toggle_ip_forward(LSHandle* lshandle, LSMessage *message, void *ctx) {
-
-  LSError lserror;
-  LSErrorInit(&lserror);
-
+int toggle_ip_forward_state() {
   FILE *fp;
-  int len = 0, state = -1;
-
+  int state = -1;
   fp = fopen(tmpIPforwardPath, "r");
   if (fp) {
     state = fgetc(fp);
@@ -110,9 +109,18 @@ bool toggle_ip_forward(LSHandle* lshandle, LSMessage *message, void *ctx) {
       fclose(fp);
     }
   }
+  return state;
+}
+
+bool toggle_ip_forward(LSHandle* lshandle, LSMessage *message, void *ctx) {
+
+  LSError lserror;
+  LSErrorInit(&lserror);
+
+  int len = 0;
 
   char *tmp = 0;
-  len = asprintf(&tmp, "{\"returnValue\":true,\"state\":%c}", (char)state);
+  len = asprintf(&tmp, "{\"returnValue\":true,\"state\":%c}", (char)toggle_ip_forward_state());
   if (tmp)
     LSMessageReply(lshandle,message,tmp,&lserror);
   else
