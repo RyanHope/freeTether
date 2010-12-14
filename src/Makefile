@@ -13,7 +13,7 @@ CPPFLAGS := -g -DVERSION=\"${VERSION}\" \
 					-DAPP_ID=\"${APP_ID}\"
 LDFLAGS := -g -L${STAGING_DIR}/usr/lib -llunaservice -lmjson -lglib-2.0 -lpthread -lrt
 
-OBJECTS=freetether.o luna_service.o luna_methods.o
+OBJECTS=freetether.o luna_service.o luna_methods.o ip_forward.o
 
 all: freetether
 

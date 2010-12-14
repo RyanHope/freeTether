@@ -3,8 +3,6 @@
 
 #include <pthread.h>
 
-#define IP_FORWARD "/proc/sys/net/ipv4/ip_forward"
-
 typedef enum {
   ASSIGN_REQUESTED,
   ASSIGNED,
@@ -64,4 +62,9 @@ struct iface_info {
 };
 
 extern struct iface_info ifaceInfo;
+
+int setupTmpDir();
+void ip_forward_cleanup();
+void *ipmon_thread(void *ptr);
+
 #endif

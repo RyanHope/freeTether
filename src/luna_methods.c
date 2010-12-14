@@ -340,7 +340,9 @@ void start_subscriptions() {
   LS_PRIV_SUBSCRIBE("dhcp/server/leaseInformation", dummy_callback);
 }
 
-LSMethod luna_methods[] = { 
+LSMethod luna_methods[] = {
+  {"get_ip_forward", get_ip_forward},
+  {"toggle_ip_forward", toggle_ip_forward},
   {"version", version},
   {"interfaceAdd", interfaceAdd},
   {"interfaceRemove", interfaceRemove},
