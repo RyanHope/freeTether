@@ -309,7 +309,7 @@ void add_bridge(struct interface *iface) {
         "\"networkScope\": \"lan\", " \
         "\"ipv4\": " \
         "{ " \
-            "\"ip\": \"0x0b01020a\", " \
+            "\"ip\": \"0x0b02010a\", " \
             "\"netmask\": \"0x00ffffff\", " \
             "\"gateway\": \"0x0b02010a\" " \
         "}" \
@@ -344,6 +344,8 @@ bool iface_status_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
       pthread_mutex_lock(&iface->mutex);
       iface->link_state = link_state;
       pthread_mutex_unlock(&iface->mutex);
+      syslog(LOG_DEBUG, "link_state %d", link_state);
+      syslog(LOG_DEBUG, "bridge_state %d", iface->bridge_state);
       if (link_state == UP && iface->bridge_state != BRIDGED)
         add_bridge(iface);
     }
