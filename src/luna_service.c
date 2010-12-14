@@ -3,6 +3,9 @@
 #include "luna_methods.h"
 
 GMainLoop *loop = NULL;
+LSPalmService	*serviceHandle;
+LSHandle		*pub_serviceHandle;
+LSHandle		*priv_serviceHandle;
 
 bool luna_service_initialize(const char *dbusAddress) {
 	bool retVal = FALSE;

@@ -9,7 +9,8 @@
 
 // TODO: fix to store all the info in ifaceInfo, to get it back to mojo via sysInfo subscription.
 // Change to a main thread state machine, and have callbacks awake the thread to indicate state change?
-// I believe this is how MHS does it.
+// I believe this is how MHS does it.  The current implementation of keeping track of states via async callbacks and hopskotch 
+// is a little messy and hard to follow.
 
 #define DBUS_MOBILE_HOTSPOT "luna://com.palm.mobilehotspot"
 #define DBUS_NETROUTE "luna://com.palm.netroute"
@@ -71,6 +72,53 @@ bool version(LSHandle *sh, LSMessage *msg, void *ctx) {
   return true;
 }
 
+static void free_iface(struct interface *iface) {
+  if (iface) {
+    if (iface->ifname)
+      free(iface->ifname);
+    if (iface->type)
+      free(iface->type);
+    if (iface->ssid)
+      free(iface->ssid);
+    if (iface->security)
+      free(iface->security);
+    if (iface->passphrase)
+      free(iface->passphrase);
+
+    free(iface);
+  }
+}
+
+static void delete_requested_iface() {
+  struct interface *iface = ifaceInfo.ifaces;
+
+  if (iface->iface_state == CREATE_REQUESTED) {
+    ifaceInfo.ifaces = iface->next;
+    free_iface(iface);
+    return;
+  }
+
+  while (iface->next && iface->next->iface_state != CREATE_REQUESTED) {
+    iface = iface->next;
+  }
+
+  if (iface->next) {
+    struct interface *pIface = iface->next;
+    iface->next = pIface->next;
+    free_iface(pIface);
+  }
+}
+
+struct interface *get_destroy_iface() {
+  struct interface *iface = ifaceInfo.ifaces;
+
+  while (iface && iface->iface_state != DESTROY_REQUESTED) {
+    iface = iface->next;
+  }
+
+  return iface;
+}
+
 struct interface *get_requested_iface() {
   struct interface *iface = ifaceInfo.ifaces;
 
@@ -81,13 +129,25 @@ struct interface *get_requested_iface() {
   return iface;
 }
 
-struct interface *get_iface(char *ifname) {
+struct interface *get_iface(char *ifname, char *type) {
   struct interface *iface = ifaceInfo.ifaces;
 
-  if (!ifname)
+  if (!ifname && !type)
     return NULL;
 
-  while (iface && strcmp(iface->ifname, ifname)) {
+  while (iface) {
+    if (ifname && type) {
+      if (!strcmp(iface->ifname, ifname) && !strcmp(iface->type, type))
+        break;
+    }
+    else if (ifname) {
+      if (!strcmp(iface->ifname, ifname))
+        break;
+    }
+    else {
+      if (!strcmp(iface->type, type))
+        break;
+    }
     iface = iface->next;
   }
 
@@ -96,6 +156,65 @@ struct interface *get_iface(char *ifname) {
 
 bool lease_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
   //TODO: Get it back to mojo in sysInfo subscription
+  return true;
+}
+
+
+bool remove_netif_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
+  LSError lserror;
+  LSErrorInit(&lserror);
+  json_t *object;
+  bool ret = FALSE;
+
+  object = json_parse_document(LSMessageGetPayload(msg));
+  json_get_bool(object, "returnValue", &ret);
+
+  if (ret) {
+    if (ifaceInfo.ip_state == REMOVE_REQUESTED) {
+      pthread_mutex_lock(&ifaceInfo.mutex);
+      ifaceInfo.ip_state = REMOVED;
+      pthread_mutex_unlock(&ifaceInfo.mutex);
+    }
+  }
+
+  return true;
+}
+
+bool dhcp_final_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
+  LSError lserror;
+  LSErrorInit(&lserror);
+  json_t *object;
+  bool ret = FALSE;
+
+  object = json_parse_document(LSMessageGetPayload(msg));
+  json_get_bool(object, "returnValue", &ret);
+
+  if (ret) {
+    pthread_mutex_lock(&ifaceInfo.mutex);
+    ifaceInfo.dhcp_state = STOPPED;
+    pthread_mutex_unlock(&ifaceInfo.mutex);
+
+    if (ifaceInfo.ip_state != REMOVED) {
+      char *payload = NULL;
+
+      asprintf(&payload, "{\"ifName\": \"%s\"}", ifaceInfo.bridge);
+      if (!payload)
+        return false;
+
+      pthread_mutex_lock(&ifaceInfo.mutex);
+      ifaceInfo.ip_state = REMOVE_REQUESTED;
+      pthread_mutex_unlock(&ifaceInfo.mutex);
+
+      LSCall(priv_serviceHandle, "palm://com.palm.netroute/removeNetIf", payload, 
+          remove_netif_callback, NULL, NULL, &lserror);
+
+      free(payload);
+    }
+  }
+  else {
+    /* Else what?  Else bad design leaves you with not knowing WTF the last state was :( */
+  }
+
   return true;
 }
 
@@ -108,12 +227,7 @@ bool dhcp_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
   object = json_parse_document(LSMessageGetPayload(msg));
   json_get_bool(object, "returnValue", &ret);
 
-  if (!ret) {
-    pthread_mutex_lock(&ifaceInfo.mutex);
-    ifaceInfo.dhcp_state = STOPPED;
-    pthread_mutex_unlock(&ifaceInfo.mutex);
-  }
-  else {
+  if (ret && ifaceInfo.dhcp_state == START_REQUESTED) {
     pthread_mutex_lock(&ifaceInfo.mutex);
     ifaceInfo.dhcp_state = STARTED;
     pthread_mutex_unlock(&ifaceInfo.mutex);
@@ -131,31 +245,27 @@ bool netif_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
   object = json_parse_document(LSMessageGetPayload(msg));
   json_get_bool(object, "returnValue", &ret);
 
-  if (!ret) {
-    pthread_mutex_lock(&ifaceInfo.mutex);
-    ifaceInfo.ip_state = REMOVED;
-    pthread_mutex_unlock(&ifaceInfo.mutex);
-  }
-  else {
+  if (ret && ifaceInfo.ip_state == ASSIGN_REQUESTED) {
     pthread_mutex_lock(&ifaceInfo.mutex);
     ifaceInfo.ip_state = ASSIGNED;
-    ifaceInfo.dhcp_state = START_REQUESTED;
+    if (ifaceInfo.dhcp_state != STARTED)
+      ifaceInfo.dhcp_state = START_REQUESTED;
     pthread_mutex_unlock(&ifaceInfo.mutex);
 
     // TODO: less hard coding
-    LSCall(priv_serviceHandle, "luna://com.palm.dhcp/interfaceInitialize", "{ " \
-          "\"interface\":\"bridge1\", "\
-          "\"mode\":\"server\", "\
-          "\"ipv4Address\":\"10.1.2.11\", "\
-          "\"ipv4Subnet\":\"255.255.255.0\", "\
-          "\"ipv4Router\":\"10.1.2.11\", "\
-          "\"dnsServers\":[\"10.1.2.11\"], "\
-          "\"ipv4RangeStart\":\"10.1.2.50\", "\
-          "\"maxLeases\":15, "\
-          "\"leaseTime\":7200}", 
-          dhcp_callback, NULL, NULL, &lserror);
-
-
+    if (ifaceInfo.dhcp_state == START_REQUESTED) {
+      LSCall(priv_serviceHandle, "luna://com.palm.dhcp/interfaceInitialize", "{ " \
+            "\"interface\":\"bridge1\", "\
+            "\"mode\":\"server\", "\
+            "\"ipv4Address\":\"10.1.2.11\", "\
+            "\"ipv4Subnet\":\"255.255.255.0\", "\
+            "\"ipv4Router\":\"10.1.2.11\", "\
+            "\"dnsServers\":[\"10.1.2.11\"], "\
+            "\"ipv4RangeStart\":\"10.1.2.50\", "\
+            "\"maxLeases\":15, "\
+            "\"leaseTime\":7200}", 
+            dhcp_callback, NULL, NULL, &lserror);
+    }
   }
 
   return true;
@@ -185,24 +295,27 @@ void add_bridge(struct interface *iface) {
   iface->bridge_state = BRIDGED;
   pthread_mutex_unlock(&iface->mutex);
 
-  pthread_mutex_lock(&ifaceInfo.mutex);
-  ifaceInfo.ip_state = ASSIGN_REQUESTED;
-  pthread_mutex_unlock(&ifaceInfo.mutex);
+  if (ifaceInfo.ip_state != ASSIGNED) {
+    pthread_mutex_lock(&ifaceInfo.mutex);
+    ifaceInfo.ip_state = ASSIGN_REQUESTED;
+    pthread_mutex_unlock(&ifaceInfo.mutex);
 
-  LSCall(priv_serviceHandle, "luna://com.palm.netroute/addNetIf", 
-    "{ " \
-       "\"ifName\": \"bridge1\", " \
-       "\"networkUsage\": [\"private\"], " \
-       "\"networkTechnology\": \"unknown\", " \ 
-       "\"networkScope\": \"lan\", " \
-       "\"ipv4\": " \
-       "{ " \
-          "\"ip\": \"0x0b01020a\", " \
-          "\"netmask\": \"0x00ffffff\", " \
-          "\"gateway\": \"0x0b02010a\" " \
-       "}" \
-      "}",
-      netif_callback, NULL, NULL, &lserror);
+    // TODO: less hard coding
+    LSCall(priv_serviceHandle, "luna://com.palm.netroute/addNetIf", 
+      "{ " \
+        "\"ifName\": \"bridge1\", " \
+        "\"networkUsage\": [\"private\"], " \
+        "\"networkTechnology\": \"unknown\", " \
+        "\"networkScope\": \"lan\", " \
+        "\"ipv4\": " \
+        "{ " \
+            "\"ip\": \"0x0b01020a\", " \
+            "\"netmask\": \"0x00ffffff\", " \
+            "\"gateway\": \"0x0b02010a\" " \
+        "}" \
+        "}",
+        netif_callback, NULL, NULL, &lserror);
+  }
 }
 
 bool iface_status_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
@@ -227,12 +340,86 @@ bool iface_status_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
       if (!strcmp(state, "up"))
         link_state = UP;
 
-      iface = get_iface(ifname);
+      iface = get_iface(ifname, NULL);
       pthread_mutex_lock(&iface->mutex);
       iface->link_state = link_state;
       pthread_mutex_unlock(&iface->mutex);
       if (link_state == UP && iface->bridge_state != BRIDGED)
         add_bridge(iface);
+    }
+  }
+
+  return true;
+}
+
+void remove_iface(struct interface *iface) {
+  struct interface *iter = ifaceInfo.ifaces;
+
+  if (iter == iface) {
+    ifaceInfo.ifaces = iface->next;
+    free_iface(iface);
+    return;
+  }
+
+  while (iter->next && iface != iter->next) {
+    iter = iter->next;
+  }
+
+  if (iter->next) {
+    iter->next = iface->next;
+    free_iface(iface);
+  }
+}
+
+int num_interfaces() {
+  struct interface *iface = ifaceInfo.ifaces;
+  int count = 0;
+
+  while (iface) {
+    iface = iface->next;
+    count++;
+  }
+
+  return count;
+}
+
+bool delete_ap_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
+  LSError lserror;
+  LSErrorInit(&lserror);
+  json_t *object;
+  struct interface *iface = NULL;
+  bool ret = false;
+  char *ifname = NULL;
+
+  object = json_parse_document(LSMessageGetPayload(msg));
+  json_get_bool(object, "returnValue", &ret);
+
+  if (ret && iface->iface_state == DESTROY_REQUESTED) {
+    iface = get_destroy_iface();
+    if (iface) {
+      if (!strcmp(iface->type, "wifi")) {
+        LSCall(priv_serviceHandle, "luna://com.palm.wifi/setstate", "{\"state\":\"enabled\"}", 
+            NULL, NULL, NULL, &lserror);
+      }
+
+      remove_iface(iface);
+      if (!num_interfaces()) {
+        char *payload = NULL;
+
+        asprintf(&payload, "{\"interface\": \"%s\"}", ifaceInfo.bridge);
+        if (!payload)
+          return false;
+
+        if (ifaceInfo.dhcp_state != STOPPED) {
+          pthread_mutex_lock(&ifaceInfo.mutex);
+          ifaceInfo.dhcp_state = STOP_REQUESTED;
+          pthread_mutex_unlock(&ifaceInfo.mutex);
+          LSCall(priv_serviceHandle, "palm://com.palm.dhcp/interfaceFinalize", payload, 
+              dhcp_final_callback, NULL, NULL, &lserror);
+        }
+
+        free(payload);
+      }
     }
   }
 
@@ -263,19 +450,45 @@ bool create_ap_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
       LS_PRIV_SUBSCRIBE("wifi/interfaceStatus", iface_status_callback);
     }
   }
+  else {
+    delete_requested_iface();
+  }
 
   return true;
 }
 
-// Hey man, what kind of hogwash crap stuffed together code is this?
-// it's 3 AM leave me alone!
+int remove_interface(char *type, char *ifname) {
+  LSError lserror;
+  LSErrorInit(&lserror);
+  char *payload = NULL;
+  struct interface *iface;
+
+  iface = get_iface(type, ifname);
+  if (!iface)
+    return -1;
+
+  asprintf(&payload, "{\"ifname\": \"%s\"}", iface->ifname);
+  if (!payload)
+    return -1;
+
+  pthread_mutex_lock(&iface->mutex);
+  iface->iface_state = DESTROY_REQUESTED;
+  pthread_mutex_unlock(&iface->mutex);
+
+  LSCall(priv_serviceHandle, "luna://com.palm.wifi/deleteAP", payload, delete_ap_callback, 
+      NULL, NULL, &lserror);
+
+  free(payload);
+
+  return true;
+}
 
 bool interfaceRemove(LSHandle *sh, LSMessage *msg, void *ctx) {
   LSError lserror;
   LSErrorInit(&lserror);
   json_t *object;
   char *type = NULL;
-  char *iface = NULL;
+  char *ifname = NULL;
 
   object = json_parse_document(LSMessageGetPayload(msg));
   type = object->child->text;
@@ -285,9 +498,15 @@ bool interfaceRemove(LSHandle *sh, LSMessage *msg, void *ctx) {
     return true;
   }
 
+  json_t *type_label = json_find_first_label(object, type);
+  json_get_string(type_label->child, "ifname", &ifname);
+
+  remove_interface(type, ifname);
   if (!strcmp(type, "wifi")) {
-    LSCall(priv_serviceHandle, "palm://com.palm.wifi/deleteAP", "{\"ifname\":\"uap0\"}", NULL, NULL, NULL, &lserror);
-    LSCall(priv_serviceHandle, "palm://com.palm.wifi/setstate", "{\"state\":\"enabled\"}", NULL, NULL, NULL, &lserror);
+    LSCall(priv_serviceHandle, "palm://com.palm.wifi/deleteAP", "{\"ifname\":\"uap0\"}", 
+        NULL, NULL, NULL, &lserror);
+    LSCall(priv_serviceHandle, "palm://com.palm.wifi/setstate", "{\"state\":\"enabled\"}", 
+        NULL, NULL, NULL, &lserror);
   }
 
   // Only finalize and remove if there are no additional interfaces active
@@ -305,6 +524,9 @@ int request_interface(char *type, char *ifname, char *ssid, char *security, char
   struct interface *iface = NULL;
   struct interface *iter = NULL;
   char *payload = NULL;
+
+  if (ifname && get_iface(ifname, NULL)) 
+    return -1;
 
   iface = calloc(1, sizeof(*iface));
   if (!iface) {
@@ -355,20 +577,42 @@ int request_interface(char *type, char *ifname, char *ssid, char *security, char
   if (!strcmp(type, "WiFi")) {
     asprintf(&payload, "{\"SSID\": \"%s\", \"Security\": \"%s\"", ssid, security);
 
-    if (passphrase /* && not Open */)
+    if (passphrase /* && not Open ? */)
       asprintf(&payload, "%s, \"Passphrase\": %s", payload, passphrase);
 
     asprintf(&payload, "%s}", payload);
   }
   else {
-    //TODO: create correct bluetooth payload for createAP method
-    return -1;
+    asprintf(&payload, "{\"type\": \"bluetooth\", \"ifname\": \"%s\"}", iface->ifname);
   }
+
+  if (!payload)
+    return -1;
 
   LSCall(priv_serviceHandle, "palm://com.palm.wifi/createAP", payload, create_ap_callback, 
       NULL, NULL, &lserror);
 
+  free(payload);
   return 0;
+}
+
+bool bt_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
+  LSError lserror;
+  LSErrorInit(&lserror);
+  json_t *object;
+  char *ifname = NULL;
+  char *status = NULL;
+
+  object = json_parse_document(LSMessageGetPayload(msg));
+  json_get_string(object, "ifname", &ifname);
+  json_get_string(object, "status", &status);
+  // Retrieve from json clientList: [macAddress: , hostName: ]
+
+  if (ifname && status && !strcmp(status, "connected")) {
+    request_interface("bluetooth", ifname, NULL, NULL, NULL);
+  }
+
+  return true;
 }
 
 bool interfaceAdd(LSHandle *sh, LSMessage *msg, void *ctx) {
@@ -417,22 +661,19 @@ bool interfaceAdd(LSHandle *sh, LSMessage *msg, void *ctx) {
     request_interface("WiFi", NULL, ssid, security, passphrase);
   }
   else if (!strcmp(type, "bluetooth")) {
-    json_get_string(object, "ifname", &ifname);
-    request_interface("bluetooth", ifname, NULL, NULL, NULL);
-    // Subscribe to com.palm.bluetooth/pan/subscribenotifications
+    LS_PRIV_SUBSCRIBE("bluetooth/pan/subscribenotifications", bt_callback);
   }
   else if (!strcmp(type, "usb")) {
     json_get_string(object, "ifname", &ifname);
+    if (!ifname) {
+      LS_REPLY_ERROR("Invalid ifname specified");
+      return true;
+    }
+
     request_interface("bluetooth", ifname, NULL, NULL, NULL);
   }
   else {
     LS_REPLY_ERROR("Invalid Interface type specified");
-    return true;
-  }
-
-  // If NOT wifi and no ifname, it's an error
-  if (strcmp(type, "wifi") && !ifname) {
-    LS_REPLY_ERROR("Invalid ifname specified");
     return true;
   }
 
@@ -441,8 +682,10 @@ bool interfaceAdd(LSHandle *sh, LSMessage *msg, void *ctx) {
 }
 
 LSMethod luna_methods[] = {
+#if 0
   {"get_ip_forward", get_ip_forward},
   {"toggle_ip_forward", toggle_ip_forward},
+#endif
   {"version", version},
   {"interfaceAdd", interfaceAdd},
   {"interfaceRemove", interfaceRemove},
