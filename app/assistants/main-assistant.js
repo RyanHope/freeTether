@@ -1,7 +1,7 @@
 function MainAssistant() {
 
 	this.cookie = new preferenceCookie();
-  this.ftservice = new FreeTetherService();
+  this.service = new FreeTetherService();
 	this.prefs = this.cookie.get();
   this.statusSubscription = null;
 	
@@ -87,7 +87,14 @@ MainAssistant.prototype.setup = function() {
 	this.controller.listen('tetherBT', Mojo.Event.propertyChange, this.toggleChangeHandler);
 	this.controller.listen('tetherUSB', Mojo.Event.propertyChange, this.toggleChangeHandler);
 	 
+  this.service.monitorServer("org.webosinternals.freetether", this.server.bind(this));
 };
+
+MainAssistant.prototype.server = function(payload) {
+        for (p in payload) {
+          Mojo.Log.error(p + " : " + payload[p]);
+        }
+}
 
 MainAssistant.prototype.handleCommand = function(event) {
 	
@@ -132,6 +139,11 @@ MainAssistant.prototype.toggleChanged = function(event) {
   var f = function(payload) {
     for (p in payload) {
       Mojo.Log.error(p + " : " + payload[p]);
+      if (typeof(p) === Object) {
+        for (s in payload[p]) {
+          Mojo.Log.error(s + " : " + payload[p][s]);
+        }
+      }
     }
   };
 
@@ -140,9 +152,9 @@ MainAssistant.prototype.toggleChanged = function(event) {
   switch(event.target.id) {
     case 'tetherWiFi':
       //if (!this.statusSubscription)
-        //this.statusSubscription = this.ftservice.getStatus({"subscribe":true},f);
+        //this.statusSubscription = this.service.getStatus({"subscribe":true},f);
       if (event.value) {
-        this.ftservice.addInterface({
+        this.service.addInterface({
           wifi: {
             SSID: "WebOS Testing",
             Security: "Open",
@@ -151,7 +163,7 @@ MainAssistant.prototype.toggleChanged = function(event) {
         }, f);
       }
       else {
-        this.ftservice.removeInterface({
+        this.service.removeInterface({
           wifi: {
             SSID:"WebOS Testing",
           }

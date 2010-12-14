@@ -7,6 +7,10 @@
 #include "luna_service.h"
 #include "freetether.h"
 
+// TODO: fix to store all the info in ifaceInfo, to get it back to mojo via sysInfo subscription.
+// Change to a main thread state machine, and have callbacks awake the thread to indicate state change?
+// I believe this is how MHS does it.
+
 #define DBUS_MOBILE_HOTSPOT "luna://com.palm.mobilehotspot"
 #define DBUS_NETROUTE "luna://com.palm.netroute"
 #define DBUS_DHCP "luna://com.palm.dhcp"
@@ -24,6 +28,7 @@ bool hotspot_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
 }
 
 void hotspot_relay(LSMessage *msg, char *method) {
+  return;
   LSError lserror;
   LSErrorInit(&lserror);
   LSMessageRef(msg);
@@ -89,6 +94,108 @@ struct interface *get_iface(char *ifname) {
   return iface;
 }
 
+bool lease_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
+  //TODO: Get it back to mojo in sysInfo subscription
+  return true;
+}
+
+bool dhcp_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
+  LSError lserror;
+  LSErrorInit(&lserror);
+  json_t *object;
+  bool ret = FALSE;
+
+  object = json_parse_document(LSMessageGetPayload(msg));
+  json_get_bool(object, "returnValue", &ret);
+
+  if (!ret) {
+    pthread_mutex_lock(&ifaceInfo.mutex);
+    ifaceInfo.dhcp_state = STOPPED;
+    pthread_mutex_unlock(&ifaceInfo.mutex);
+  }
+  else {
+    pthread_mutex_lock(&ifaceInfo.mutex);
+    ifaceInfo.dhcp_state = STARTED;
+    pthread_mutex_unlock(&ifaceInfo.mutex);
+
+    LS_PRIV_SUBSCRIBE("dhcp/server/leaseInformation", lease_callback);
+  }
+}
+
+bool netif_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
+  LSError lserror;
+  LSErrorInit(&lserror);
+  json_t *object;
+  bool ret = FALSE;
+
+  object = json_parse_document(LSMessageGetPayload(msg));
+  json_get_bool(object, "returnValue", &ret);
+
+  if (!ret) {
+    pthread_mutex_lock(&ifaceInfo.mutex);
+    ifaceInfo.ip_state = REMOVED;
+    pthread_mutex_unlock(&ifaceInfo.mutex);
+  }
+  else {
+    pthread_mutex_lock(&ifaceInfo.mutex);
+    ifaceInfo.ip_state = ASSIGNED;
+    ifaceInfo.dhcp_state = START_REQUESTED;
+    pthread_mutex_unlock(&ifaceInfo.mutex);
+
+    // TODO: less hard coding
+    LSCall(priv_serviceHandle, "com.palm.dhcp/interfaceInitialize", "{\
+          \"interface\":\"bridge1\", \
+          \"mode\":\"server\", \
+          \"ipv4Address\":\"10.1.2.11\", \
+          \"ipv4Subnet\":\"255.255.255.0\", \
+          \"ipv4Router\":\"10.1.2.11\", \
+          \"dnsServers\":[\"10.1.2.11\"], \
+          \"ipv4RangeStart\":\"10.1.2.50\", \
+          \"maxLeases\":15, \
+          \"leaseTime\":7200}", 
+          dhcp_callback, NULL, NULL, &lserror);
+
+
+  }
+
+  return true;
+}
+
+void add_bridge(struct interface *iface) {
+  LSError lserror;
+  LSErrorInit(&lserror);
+  int ret;
+
+  // TODO: Check that bridge/interface doesn't already exist
+  ret = br_add_bridge("bridge1");
+  syslog(LOG_DEBUG, "add bridge %d\n", ret);
+  ret = br_add_interface("bridge1", iface->ifname);
+  syslog(LOG_DEBUG, "add interface %d\n", ret);
+
+  pthread_mutex_lock(&iface->mutex);
+  iface->bridge_state = BRIDGED;
+  pthread_mutex_unlock(&iface->mutex);
+
+  pthread_mutex_lock(&ifaceInfo.mutex);
+  ifaceInfo.ip_state = ASSIGN_REQUESTED;
+  pthread_mutex_unlock(&ifaceInfo.mutex);
+
+  LSCall(priv_serviceHandle, "luna://com.palm.netroute/addNetIf", 
+    "{ " \
+       "\"ifName\": \"bridge1\", " \
+       "\"networkUsage\": [\"private\"], " \
+       "\"networkTechnology\": \"unknown\", " \ 
+       "\"networkScope\": \"lan\", " \
+       "\"ipv4\": " \
+       "{ " \
+          "\"ip\": \"0x0b01020a\", " \
+          "\"netmask\": \"0x00ffffff\", " \
+          "\"gateway\": \"0x0b02010a\" " \
+       "}" \
+      "}",
+      netif_callback, NULL, NULL, &lserror);
+}
+
 bool iface_status_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
   LSError lserror;
   LSErrorInit(&lserror);
@@ -96,7 +203,7 @@ bool iface_status_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
   char *ifname = NULL;
   char *state = NULL;
   struct interface *iface;
-  IFACE_STATE iface_state = UNKNOWN;
+  LINK_STATE link_state = UNKNOWN;
   json_t *object;
 
   object = json_parse_document(LSMessageGetPayload(msg));
@@ -107,14 +214,15 @@ bool iface_status_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
     json_get_string(object, "state", &state);
     if (ifname && state) {
       if (!strcmp(state, "down"))
-        iface_state = DOWN;
+        link_state = DOWN;
       if (!strcmp(state, "up"))
-        iface_state = UP;
+        link_state = UP;
 
       iface = get_iface(ifname);
       pthread_mutex_lock(&iface->mutex);
-      iface->iface_state = iface_state;
+      iface->link_state = link_state;
       pthread_mutex_unlock(&iface->mutex);
+      add_bridge(iface);
     }
   }
 
@@ -129,13 +237,16 @@ bool create_ap_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
   bool ret = false;
   char *ifname = NULL;
 
+  syslog(LOG_DEBUG, "ap callback");
   object = json_parse_document(LSMessageGetPayload(msg));
   json_get_bool(object, "returnValue", &ret);
 
   if (ret) {
-    json_get_string(object, "returnValue", &ifname);
+    json_get_string(object, "ifname", &ifname);
     iface = get_requested_iface();
-    if (iface) {
+
+    syslog(LOG_DEBUG, "iface %p, ifname %s", iface, ifname);
+    if (iface && ifname) {
       pthread_mutex_lock(&ifaceInfo.ifaces[0].mutex);
       iface->ifname = malloc(strlen(ifname) + 1);
       strcpy(iface->ifname, ifname);
@@ -181,7 +292,7 @@ bool interfaceRemove(LSHandle *sh, LSMessage *msg, void *ctx) {
   return true;
 }
 
-int request_interface(char *type, char *ssid, char *security, char *passphrase) {
+int request_interface(char *type, char *ifname, char *ssid, char *security, char *passphrase) {
   LSError lserror;
   LSErrorInit(&lserror);
   struct interface *iface = NULL;
@@ -227,15 +338,26 @@ int request_interface(char *type, char *ssid, char *security, char *passphrase) 
     iface->passphrase = malloc(strlen(passphrase) + 1);
     strcpy(iface->passphrase, passphrase);
   }
+
+  if (ifname) {
+    iface->ifname = malloc(strlen(ifname) + 1);
+    strcpy(iface->ifname, ifname);
+  }
   pthread_mutex_unlock(&iface->mutex);
 
-  asprintf(&payload, "{\"SSID\": \"%s\", \"Security\": \"%s\"", ssid, security);
-  if (passphrase /* && not Open */) {
-    asprintf(&payload, "%s, \"Passphrase\": %s", payload, passphrase);
-  }
-  asprintf(&payload, "%s}", payload);
+  if (!strcmp(type, "WiFi")) {
+    asprintf(&payload, "{\"SSID\": \"%s\", \"Security\": \"%s\"", ssid, security);
 
-  // Probably have to ifconfig uap0 up here when wifi
+    if (passphrase /* && not Open */)
+      asprintf(&payload, "%s, \"Passphrase\": %s", payload, passphrase);
+
+    asprintf(&payload, "%s}", payload);
+  }
+  else {
+    //TODO: create correct bluetooth payload for createAP method
+    return -1;
+  }
+
   LSCall(priv_serviceHandle, "palm://com.palm.wifi/createAP", payload, create_ap_callback, 
       NULL, NULL, &lserror);
 
@@ -246,7 +368,7 @@ bool interfaceAdd(LSHandle *sh, LSMessage *msg, void *ctx) {
   LSError lserror;
   LSErrorInit(&lserror);
   char *type = NULL;
-  char iface[10];
+  char *ifname = NULL;
   char command[80];
   json_t *object;
   char *uri = NULL;
@@ -287,57 +409,30 @@ bool interfaceAdd(LSHandle *sh, LSMessage *msg, void *ctx) {
         NULL, NULL, NULL, &lserror);
 
     // TODO: Add check for passphrase length
-    request_interface("WiFi", ssid, security, passphrase);
+    request_interface("WiFi", NULL, ssid, security, passphrase);
   }
   else if (!strcmp(type, "bluetooth")) {
-    json_get_string(object, "ifname", &iface);
+    json_get_string(object, "ifname", &ifname);
+    request_interface("bluetooth", ifname, NULL, NULL, NULL);
     // Subscribe to com.palm.bluetooth/pan/subscribenotifications
   }
   else if (!strcmp(type, "usb")) {
-    json_get_string(object, "ifname", &iface);
+    json_get_string(object, "ifname", &ifname);
+    request_interface("bluetooth", ifname, NULL, NULL, NULL);
   }
   else {
     LS_REPLY_ERROR("Invalid Interface type specified");
     return true;
   }
 
-  if (!iface) {
+  // If NOT wifi and no ifname, it's an error
+  if (strcmp(type, "wifi") && !ifname) {
     LS_REPLY_ERROR("Invalid ifname specified");
     return true;
   }
 
-  // TODO: Use libnetbridge directly
-  system("brctl addbr bridge1");
-  sprintf(command, "brctl addif bridge1 %s", iface);
-  system(command);
-
-
-  // TODO: callbacks, return values, error checking
-  uri = malloc(strlen(DBUS_NETROUTE) + strlen("/addNetIf") + 1);
-  sprintf(uri, "%s/addNetIf", DBUS_NETROUTE);
-  LSCall(priv_serviceHandle, uri, "{\"ifName\":\"bridge1\", \"networkUsage\":[\"private\"], \"networkTechnology\":\"unknown\", \"networkScope\":\"lan\", \"ipv4\":{\"ip\":\"0x0b01020a\", \"netmask\":\"0x00ffffff\", \"gateway\":\"0x0b02010a\"}}", NULL, NULL, NULL, &lserror);
-
-  uri = realloc(uri, strlen(DBUS_DHCP) + strlen("/interfaceInitialize") + 1);
-  sprintf(uri, "%s/interfaceInitialize", DBUS_DHCP);
-  LSCall(priv_serviceHandle, uri, "{\"interface\":\"bridge1\", \"mode\":\"server\", \"ipv4Address\":\"10.1.2.11\", \"ipv4Subnet\":\"255.255.255.0\", \"ipv4Router\":\"10.1.2.11\", \"dnsServers\":[\"10.1.2.11\"], \"ipv4RangeStart\":\"10.1.2.70\", \"maxLeases\":15, \"leaseTime\":7200}", NULL, NULL, NULL, &lserror);
-
   LSMessageReply(sh, msg, "{\"returnValue\":true}", &lserror);
-
   return true;
-}
-
-bool dummy_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
-  syslog(LOG_DEBUG, "DUMMY CALLBACK");
-  syslog(LOG_DEBUG, "%s", LSMessageGetPayload(msg));
-  return true;
-}
-
-void start_subscriptions() {
-  LSError lserror;
-  LSErrorInit(&lserror);
-
-  LS_PRIV_SUBSCRIBE("wifi/interfaceStatus", dummy_callback);
-  LS_PRIV_SUBSCRIBE("dhcp/server/leaseInformation", dummy_callback);
 }
 
 LSMethod luna_methods[] = { 

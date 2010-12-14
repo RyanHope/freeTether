@@ -9,24 +9,24 @@ char *tmpDir;
 char *tmpIPforwardPath;
 
 typedef enum {
+  REMOVED,
   ASSIGN_REQUESTED,
   ASSIGNED,
-  REMOVE_REQUESTED,
-  REMOVED
+  REMOVE_REQUESTED
 } IP_STATE;
 
 typedef enum {
+  STOPPED,
   START_REQUESTED,
   STARTED,
-  STOP_REQUESTED,
-  STOPPED
+  STOP_REQUESTED
 } DHCP_STATE;
 
 typedef enum {
+  DESTROYED,
   CREATE_REQUESTED,
   CREATED,
-  DESTROY_REQUESTED,
-  DESTROYED
+  DESTROY_REQUESTED
 } IFACE_STATE;
 
 typedef enum {
@@ -53,11 +53,16 @@ struct interface {
   struct interface *next;
 };
 
+#define DEFAULT_BRIDGE "bridge1"
+#define DEFAULT_IP "10.1.2.11"
+#define DEFAULT_SUBNET "255.255.255.0"
+#define DEFAULT_POOLSTART "10.1.2.50"
+
 struct iface_info {
-  char bridge[16];
-  char ip[16];
-  char subnet[16];
-  char poolstart[16];
+  char *bridge;
+  char *ip;
+  char *subnet;
+  char *poolstart;
   IP_STATE ip_state;
   DHCP_STATE dhcp_state;
   struct interface *ifaces;

@@ -21,6 +21,15 @@ static void sys_info_init() {
   memset(&ifaceInfo, 0, sizeof(ifaceInfo));
   pthread_mutex_init(&ifaceInfo.mutex, NULL); 
   pthread_cond_init (&ifaceInfo.state_change, NULL);
+
+  ifaceInfo.bridge = malloc(strlen(DEFAULT_BRIDGE) + 1);
+  strcpy(ifaceInfo.bridge, DEFAULT_BRIDGE);
+  ifaceInfo.ip = malloc(strlen(DEFAULT_IP) + 1);
+  strcpy(ifaceInfo.ip, DEFAULT_IP);
+  ifaceInfo.subnet = malloc(strlen(DEFAULT_SUBNET) + 1);
+  strcpy(ifaceInfo.subnet, DEFAULT_SUBNET);
+  ifaceInfo.poolstart = malloc(strlen(DEFAULT_POOLSTART) + 1);
+  strcpy(ifaceInfo.poolstart, DEFAULT_POOLSTART);
 }
 
 static void *iface_thread(void *arg) {

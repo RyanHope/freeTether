@@ -11,7 +11,7 @@ CPPFLAGS := -g -DVERSION=\"${VERSION}\" \
 					-I${STAGING_DIR}/usr/include/mjson \
 					-I. \
 					-DAPP_ID=\"${APP_ID}\"
-LDFLAGS := -g -L${STAGING_DIR}/usr/lib -llunaservice -lmjson -lglib-2.0 -lpthread -lrt
+LDFLAGS := -g -L. -L${STAGING_DIR}/usr/lib -llunaservice -lmjson -lglib-2.0 -lpthread -lrt -lnetbridge
 
 OBJECTS=freetether.o luna_service.o luna_methods.o
 

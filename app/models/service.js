@@ -1,9 +1,11 @@
+//var ServiceUri = "palm://com.palm.mobilehotspot";
+var ServiceUri = "palm://org.webosinternals.freetether";
 var FreeTetherService = Class.create({
   initialize: function() {
   },
 
   addInterface: function(param, callback) {
-    var request = new Mojo.Service.Request('palm://org.webosinternals.freetether', {
+    var request = new Mojo.Service.Request(ServiceUri, {
       method: 'interfaceAdd',
       parameters: param,
       onSuccess: callback,
@@ -14,7 +16,7 @@ var FreeTetherService = Class.create({
   },
 
   removeInterface: function(param, callback) {
-    var request = new Mojo.Service.Request('palm://org.webosinternals.freetether', {
+    var request = new Mojo.Service.Request(ServiceUri, {
       method: 'interfaceRemove',
       parameters: param,
       onSuccess: callback,
@@ -25,7 +27,7 @@ var FreeTetherService = Class.create({
   },
 
   getStatus: function(param, callback) {
-    var request = new Mojo.Service.Request('palm://org.webosinternals.freetether', {
+    var request = new Mojo.Service.Request(ServiceUri, {
       method: 'sysInfo',
       parameters: param,
       onSuccess: callback,
@@ -35,5 +37,16 @@ var FreeTetherService = Class.create({
     return request;
   },
 
+  monitorServer: function(name, callback) {
+    var request = new Mojo.Service.Request('palm://com.palm.bus/signal', {
+      method: 'registerServerStatus',
+      parameters: {
+        serviceName: name,
+        subscribe: true,
+      },
+      onSuccess: callback,
+      onFailure: callback
+    });
+  },
 
 });
