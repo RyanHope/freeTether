@@ -6,6 +6,9 @@
 
 bool register_methods(LSPalmService *serviceHandle, LSError lserror);
 
+bool toggle_ip_forward(LSHandle* lshandle, LSMessage *message, void *ctx);
+bool get_ip_forward(LSHandle* lshandle, LSMessage *message, void *ctx);
+
 #define LS_REPLY_ERROR(err) \
 do { \
   char *text = NULL; \

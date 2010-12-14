@@ -3,21 +3,17 @@
 #include <string.h>
 #include <syslog.h>
 #include <signal.h>
-#include <sys/mount.h>
 
 #include "freetether.h"
+#include "luna_methods.h"
 
 #ifndef APP_ID
 #error Must define APP_ID macro
 #endif
 
-#ifndef DEBUG
-#define DEBUG 0
-#endif
-
 struct iface_info ifaceInfo;
 
-static void sys_info_init() {
+static int sys_info_init() {
   memset(&ifaceInfo, 0, sizeof(ifaceInfo));
   pthread_mutex_init(&ifaceInfo.mutex, NULL); 
   pthread_cond_init (&ifaceInfo.state_change, NULL);
@@ -30,6 +26,8 @@ static void sys_info_init() {
   strcpy(ifaceInfo.subnet, DEFAULT_SUBNET);
   ifaceInfo.poolstart = malloc(strlen(DEFAULT_POOLSTART) + 1);
   strcpy(ifaceInfo.poolstart, DEFAULT_POOLSTART);
+
+  return 0;
 }
 
 static void *iface_thread(void *arg) {
@@ -42,11 +40,7 @@ static void *iface_thread(void *arg) {
 }
 
 void cleanup() {
-  umount(tmpDir);
-  rmdir(tmpDir);
-  umount(IP_FORWARD);
-  free(tmpDir);
-  free(tmpIPforwardPath);
+  ip_forward_cleanup();
 }
 
 void sighandler(int sig) {
@@ -54,39 +48,7 @@ void sighandler(int sig) {
   exit(0);
 }
 
-int setupTmpDir() {
-
-  char template[] = "/tmp/freeTether.XXXXXX";
-  char *d = mkdtemp(template);
-
-  if (d==NULL) {
-    if (DEBUG) syslog(LOG_ERR, "Failed creating tmp directory %s", template);
-    return 1;
-  } else {
-    tmpDir = strdup(d);
-    syslog(LOG_INFO, "Temporary directory %s created", tmpDir);
-    if (mount("/dev/null", IP_FORWARD, NULL, MS_BIND, NULL)) {
-      if (DEBUG) syslog(LOG_ERR, "Failed binding %s to %s", tmpIPforwardPath, IP_FORWARD);
-      return 1;
-    } else {
-      syslog(LOG_INFO, "Procfs now available at %s", tmpDir);
-      tmpIPforwardPath = 0;
-      if (asprintf(&tmpIPforwardPath,"%s/sys/net/ipv4/ip_forward",tmpDir) == -1) {
-        if (DEBUG) syslog(LOG_ERR, "Failed creating tmp ip_forward path");
-        return 1;
-      }
-    }
-  }
-
-  return 0;
-
-}
-
 int main(int argc, char **argv) {
-  pthread_t tid;
-
-  sys_info_init();
-  pthread_create(&tid, NULL, iface_thread, NULL);
 
   signal(SIGINT, sighandler);
   signal(SIGTERM, sighandler);
@@ -96,10 +58,14 @@ int main(int argc, char **argv) {
 
   openlog(APP_ID, LOG_PID, LOG_USER);
 
-  setupTmpDir();
+  pthread_t iface_tid;
+  pthread_t ipmon_tid;
 
-  if (luna_service_initialize(APP_ID))
+  if (!setupTmpDir() && !sys_info_init() && luna_service_initialize(APP_ID)) {
+    pthread_create(&iface_tid, NULL, iface_thread, NULL);
+    pthread_create(&ipmon_tid, NULL, ipmon_thread, NULL);
     luna_service_start();
+  }
 
   return 0;
 }

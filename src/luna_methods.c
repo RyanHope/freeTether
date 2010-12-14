@@ -435,7 +435,9 @@ bool interfaceAdd(LSHandle *sh, LSMessage *msg, void *ctx) {
   return true;
 }
 
-LSMethod luna_methods[] = { 
+LSMethod luna_methods[] = {
+  {"get_ip_forward", get_ip_forward},
+  {"toggle_ip_forward", toggle_ip_forward},
   {"version", version},
   {"interfaceAdd", interfaceAdd},
   {"interfaceRemove", interfaceRemove},

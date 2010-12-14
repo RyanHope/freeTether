@@ -3,11 +3,6 @@
 
 #include <pthread.h>
 
-#define IP_FORWARD "/proc/sys/net/ipv4/ip_forward"
-
-char *tmpDir;
-char *tmpIPforwardPath;
-
 typedef enum {
   REMOVED,
   ASSIGN_REQUESTED,
@@ -72,4 +67,9 @@ struct iface_info {
 };
 
 extern struct iface_info ifaceInfo;
+
+int setupTmpDir();
+void ip_forward_cleanup();
+void *ipmon_thread(void *ptr);
+
 #endif
