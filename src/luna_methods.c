@@ -16,54 +16,6 @@
 #define DBUS_NETROUTE "luna://com.palm.netroute"
 #define DBUS_DHCP "luna://com.palm.dhcp"
 
-bool hotspot_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
-  LSError lserror;
-  LSErrorInit(&lserror);
-
-  LSMessageRespond((LSMessage *)ctx, LSMessageGetPayload(msg), &lserror);
-
-  if (!LSMessageIsSubscription((LSMessage *)ctx))
-    LSMessageUnref((LSMessage *)ctx);
-
-  return true;
-}
-
-void hotspot_relay(LSMessage *msg, char *method) {
-  return;
-  LSError lserror;
-  LSErrorInit(&lserror);
-  LSMessageRef(msg);
-  char *uri = malloc(strlen(DBUS_MOBILE_HOTSPOT) + strlen("/") + strlen(method) + 1);
-
-  sprintf(uri, "%s/%s", DBUS_MOBILE_HOTSPOT, method);
-  LSCall(priv_serviceHandle, uri, LSMessageGetPayload(msg), hotspot_callback, (void *)msg, NULL, &lserror);
-}
-
-bool sysInfo(LSHandle *sh, LSMessage *msg, void *ctx) {
-  hotspot_relay(msg, "sysInfo");
-  return true;
-}
-
-bool clientList(LSHandle *sh, LSMessage *msg, void *ctx) {
-  hotspot_relay(msg, "clientList");
-  return true;
-}
-
-bool configRead(LSHandle *sh, LSMessage *msg, void *ctx) {
-  hotspot_relay(msg, "configRead");
-  return true;
-}
-
-bool configWrite(LSHandle *sh, LSMessage *msg, void *ctx) {
-  hotspot_relay(msg, "configWrite");
-  return true;
-}
-
-bool deauthclient(LSHandle *sh, LSMessage *msg, void *ctx) {
-  hotspot_relay(msg, "deauthclient");
-  return true;
-}
-
 bool version(LSHandle *sh, LSMessage *msg, void *ctx) {
   LSError lserror;
   LSErrorInit(&lserror);
@@ -255,13 +207,13 @@ bool netif_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
     // TODO: less hard coding
     if (ifaceInfo.dhcp_state == START_REQUESTED) {
       LSCall(priv_serviceHandle, "luna://com.palm.dhcp/interfaceInitialize", "{ " \
-            "\"interface\":\"bridge1\", "\
+            "\"interface\":\"bridge0\", "\
             "\"mode\":\"server\", "\
-            "\"ipv4Address\":\"10.1.2.11\", "\
+            "\"ipv4Address\":\"10.1.1.11\", "\
             "\"ipv4Subnet\":\"255.255.255.0\", "\
-            "\"ipv4Router\":\"10.1.2.11\", "\
-            "\"dnsServers\":[\"10.1.2.11\"], "\
-            "\"ipv4RangeStart\":\"10.1.2.50\", "\
+            "\"ipv4Router\":\"10.1.1.11\", "\
+            "\"dnsServers\":[\"10.1.1.11\"], "\
+            "\"ipv4RangeStart\":\"10.1.1.50\", "\
             "\"maxLeases\":15, "\
             "\"leaseTime\":7200}", 
             dhcp_callback, NULL, NULL, &lserror);
@@ -277,14 +229,14 @@ void add_bridge(struct interface *iface) {
   int ret;
 
   // TODO: Check that bridge/interface doesn't already exist
-  ret = br_add_bridge("bridge1");
+  ret = br_add_bridge("bridge0");
   syslog(LOG_DEBUG, "add bridge %d\n", ret);
-  ret = br_add_interface("bridge1", iface->ifname);
+  ret = br_add_interface("bridge0", iface->ifname);
   syslog(LOG_DEBUG, "add interface %d\n", ret);
 
-  system("brctl addbr bridge1");
+  system("brctl addbr bridge0");
   char command[80];
-  sprintf(command, "brctl addif bridge1 %s", iface->ifname);
+  sprintf(command, "brctl addif bridge0 %s", iface->ifname);
   system(command);
 
   // Have to up at least for uap0 it seems
@@ -303,15 +255,15 @@ void add_bridge(struct interface *iface) {
     // TODO: less hard coding
     LSCall(priv_serviceHandle, "luna://com.palm.netroute/addNetIf", 
       "{ " \
-        "\"ifName\": \"bridge1\", " \
+        "\"ifName\": \"bridge0\", " \
         "\"networkUsage\": [\"private\"], " \
         "\"networkTechnology\": \"unknown\", " \
         "\"networkScope\": \"lan\", " \
         "\"ipv4\": " \
         "{ " \
-            "\"ip\": \"0x0b02010a\", " \
+            "\"ip\": \"0x0b01010a\", " \
             "\"netmask\": \"0x00ffffff\", " \
-            "\"gateway\": \"0x0b02010a\" " \
+            "\"gateway\": \"0x0b01010a\" " \
         "}" \
         "}",
         netif_callback, NULL, NULL, &lserror);
@@ -512,28 +464,30 @@ bool interfaceRemove(LSHandle *sh, LSMessage *msg, void *ctx) {
   }
 
   // Only finalize and remove if there are no additional interfaces active
-  LSCall(priv_serviceHandle, "palm://com.palm.dhcp/interfaceFinalize", "{\"interface\":\"bridge1\"}", NULL, NULL, NULL, &lserror);
-  LSCall(priv_serviceHandle, "palm://com.palm.netroute/removeNetIf", "{\"ifName\":\"bridge1\"}", NULL, NULL, NULL, &lserror);
+  LSCall(priv_serviceHandle, "palm://com.palm.dhcp/interfaceFinalize", "{\"interface\":\"bridge0\"}", NULL, NULL, NULL, &lserror);
+  LSCall(priv_serviceHandle, "palm://com.palm.netroute/removeNetIf", "{\"ifName\":\"bridge0\"}", NULL, NULL, NULL, &lserror);
 
   LSMessageReply(sh, msg, "{\"returnValue\":true}", &lserror);
 
   return true;
 }
 
-int request_interface(char *type, char *ifname, char *ssid, char *security, char *passphrase) {
+struct interface * request_interface(char *type, char *ifname, char *ssid, char *security, char *passphrase) {
   LSError lserror;
   LSErrorInit(&lserror);
   struct interface *iface = NULL;
   struct interface *iter = NULL;
   char *payload = NULL;
 
-  if (ifname && get_iface(ifname, NULL)) 
-    return -1;
+  if (ifname && get_iface(ifname, NULL)) {
+    syslog(LOG_WARNING, "WARNING: Already requested interface %s, not setting up again\n", ifname);
+    return NULL;
+  }
 
   iface = calloc(1, sizeof(*iface));
   if (!iface) {
     syslog(LOG_ERR, "ERROR: Unable to allocate space for additional interface!");
-    return -1;
+    return NULL;
   }
 
   iter = ifaceInfo.ifaces;
@@ -589,13 +543,13 @@ int request_interface(char *type, char *ifname, char *ssid, char *security, char
   }
 
   if (!payload)
-    return -1;
+    return NULL;
 
   LSCall(priv_serviceHandle, "palm://com.palm.wifi/createAP", payload, create_ap_callback, 
       NULL, NULL, &lserror);
 
   free(payload);
-  return 0;
+  return iface;
 }
 
 bool bt_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
@@ -604,14 +558,35 @@ bool bt_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
   json_t *object;
   char *ifname = NULL;
   char *status = NULL;
+  LINK_STATE link_state = UNKNOWN;
 
   object = json_parse_document(LSMessageGetPayload(msg));
   json_get_string(object, "ifname", &ifname);
   json_get_string(object, "status", &status);
   // Retrieve from json clientList: [macAddress: , hostName: ]
 
-  if (ifname && status && !strcmp(status, "connected")) {
-    request_interface("bluetooth", ifname, NULL, NULL, NULL);
+  if (ifname && status) {
+    if (!strcmp(status, "connected")) {
+      struct interface *iface;
+      json_t *clientlist = json_find_first_label(object, "clientList");
+
+      link_state = UP;
+      iface = request_interface("bluetooth", ifname, NULL, NULL, NULL);
+      if (link_state == UP && iface->bridge_state != BRIDGED)
+        add_bridge(iface);
+
+      if (clientlist && clientlist->child && clientlist->child->child) {
+        char *mac;
+
+        // TODO: fix to build client list of mac/hostnames to report
+        json_get_string(clientlist->child->child, "macAddress", &mac);
+        syslog(LOG_DEBUG, "first client mac %s\n", mac);
+      }
+    }
+    else {
+      link_state = DOWN;
+      // TODO: clean up connections?
+    }
   }
 
   return true;
@@ -663,6 +638,7 @@ bool interfaceAdd(LSHandle *sh, LSMessage *msg, void *ctx) {
     request_interface("WiFi", NULL, ssid, security, passphrase);
   }
   else if (!strcmp(type, "bluetooth")) {
+    // TODO: Check if already enabled/subscribed first
     LS_PRIV_SUBSCRIBE("bluetooth/pan/subscribenotifications", bt_callback);
   }
   else if (!strcmp(type, "usb")) {
@@ -684,19 +660,29 @@ bool interfaceAdd(LSHandle *sh, LSMessage *msg, void *ctx) {
 }
 
 LSMethod luna_methods[] = {
-#if 0
   {"get_ip_forward", get_ip_forward},
   {"toggle_ip_forward", toggle_ip_forward},
-#endif
   {"version", version},
   {"interfaceAdd", interfaceAdd},
   {"interfaceRemove", interfaceRemove},
+#if 0
   {"sysInfo", sysInfo},
   {"clientList", clientList},
   {"configRead", configRead},
   {"configWrite", configWrite},
   {"deauthclient", deauthclient},
+#endif
+  { NULL, NULL},
 };
+
+#if 0
+void early_subscriptions() {
+  LSError lserror;
+  LSErrorInit(&lserror);
+
+  LS_PRIV_SUBSCRIBE("bluetooth/pan/subscribenotifications", bt_callback);
+}
+#endif
 
 bool register_methods(LSPalmService *serviceHandle, LSError lserror) {
 	return LSPalmServiceRegisterCategory(serviceHandle, "/", luna_methods,

@@ -44,14 +44,15 @@ struct interface {
   char *ssid;
   char *security;
   char *passphrase;
+  // TODO: clientList - list of mac/hostname
   pthread_mutex_t mutex;
   struct interface *next;
 };
 
-#define DEFAULT_BRIDGE "bridge1"
-#define DEFAULT_IP "10.1.2.11"
+#define DEFAULT_BRIDGE "bridge0"
+#define DEFAULT_IP "10.1.1.11"
 #define DEFAULT_SUBNET "255.255.255.0"
-#define DEFAULT_POOLSTART "10.1.2.50"
+#define DEFAULT_POOLSTART "10.1.1.50"
 
 struct iface_info {
   char *bridge;
