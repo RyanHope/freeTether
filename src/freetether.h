@@ -35,6 +35,11 @@ typedef enum {
   DOWN
 } LINK_STATE;
 
+struct client {
+  char *mac;
+  char *hostname;
+};
+
 struct interface {
   char *ifname;
   IFACE_STATE iface_state;
@@ -44,7 +49,7 @@ struct interface {
   char *ssid;
   char *security;
   char *passphrase;
-  // TODO: clientList - list of mac/hostname
+  // TODO: struct client *clients;
   pthread_mutex_t mutex;
   struct interface *next;
 };

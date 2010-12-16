@@ -1,0 +1,10 @@
+* Implement client list for interfaces (mac/hostname pairs).
+* Separate linked list to generic lists in own .c file.
+* Fix/Verify the subscriptions and subscribe to the relevant methods at beginning of run.
+  NOTE I do not think dhcp lease information subscription really works
+* Fix/Verify the tracking of all states and error conditions.
+* Implement sysInfo to report everything back to mojo via subscription.
+* Don't ip forward if the lease callback is empty leases.
+* Use the structure values not hardcoded bridge0 and ip addresses.
+* Check into libnetbridge (currently returning funky values)
+* Make sure ip forwarding is solid.

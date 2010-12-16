@@ -31,7 +31,7 @@ static int sys_info_init() {
 }
 
 void cleanup() {
-  pthread_cancel(ipmon_tid);
+  ip_forward_cleanup();
 }
 
 void sighandler(int sig) {
@@ -50,7 +50,10 @@ int main(int argc, char **argv) {
 
   openlog(APP_ID, LOG_PID, LOG_USER);
 
-  if (!setupTmpDir() && !sys_info_init() && luna_service_initialize(APP_ID)) {
+  // TODO: use c not system
+  system("mount --bind /bin/true /usr/bin/mobilehotspotd && killall -9 mobilehotspot");
+
+  if (!sys_info_init() && luna_service_initialize(APP_ID)) {
     pthread_create(&ipmon_tid, NULL, ipmon_thread, NULL);
     luna_service_start();
   }

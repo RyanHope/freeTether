@@ -13,15 +13,22 @@
 
 int monitor_ip_forward;
 
+void ip_forward_cleanup() {
+  monitor_ip_forward = 0;
+}
+
 int get_ip_forward_state() {
   FILE *fp;
   int state = -1;
 
   fp = fopen(IP_FORWARD, "r");
-  if (fp) {
-    state = fgetc(fp);
-    fclose(fp);
+  if (!fp) {
+    syslog(LOG_ERR, "Error opening %s for reading", IP_FORWARD);
+    return -1;
   }
+
+  fscanf(fp, "%d", &state);
+  fclose(fp);
 
   return state;
 }
@@ -52,35 +59,31 @@ bool get_ip_forward(LSHandle* lshandle, LSMessage *message, void *ctx) {
 
 int toggle_ip_forward_state() {
   FILE *fp;
-  int state = -1;
+  int ret = -1;
+  int state;
+  int count = 0;
+  int i;
 
-  fp = fopen(IP_FORWARD, "w");
+  fp = fopen(IP_FORWARD, "w+");
 
   if (!fp) {
     syslog(LOG_ERR, "Cannot open %s for writing", IP_FORWARD);
     return -1;
   }
 
-  state = fgetc(fp);
+  fscanf(fp, "%d", &state);
+  state ^= 1;
 
-  switch((char)state) {
-    case '0': 
-      fprintf(fp, "1");
+  for (i=0; i<5; i++) {
+    if (ret == 1)
       break;
-    case '1': 
-      fprintf(fp, "0");
-      break;
-    default: 
-      slog(LOG_ERR, "Toggle ip read invalid state %d", state);
-      fclose(fp);
-      return -1;
-      break;
+    ret = fprintf(fp, "%d", state);
   }
 
-  state = fgetc(fp);
+  syslog(LOG_DEBUG, "Tried to write state %d times, final ret %d\n", i, ret);
   fclose(fp);
 
-  return state;
+  return 0;
 }
 
 bool toggle_ip_forward(LSHandle* lshandle, LSMessage *message, void *ctx) {
@@ -105,6 +108,9 @@ bool toggle_ip_forward(LSHandle* lshandle, LSMessage *message, void *ctx) {
 }
 
 void *ipmon_thread(void *ptr) {
+  // TODO: seg faulting
+  return NULL;
+
   LSError lserror;
   LSErrorInit(&lserror);
 
@@ -130,9 +136,10 @@ void *ipmon_thread(void *ptr) {
     if (len > 0) {
       fp = fopen(IP_FORWARD, "r");
       if (fp) {
-        state = fgetc(fp);
+        fscanf(fp, "%d", state);
         fclose(fp);
-        len = asprintf(&tmp, "{\"state\":%c}", (char)state);
+        syslog(LOG_DEBUG, "monitor thread state %d", state);
+        len = asprintf(&tmp, "{\"state\":%d}", state);
         if (tmp) {
           LSSubscriptionRespond(serviceHandle,"/get_ip_forward",tmp, &lserror);
           free(tmp);

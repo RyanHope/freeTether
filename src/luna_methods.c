@@ -11,10 +11,26 @@
 // Change to a main thread state machine, and have callbacks awake the thread to indicate state change?
 // I believe this is how MHS does it.  The current implementation of keeping track of states via async callbacks and hopskotch 
 // is a little messy and hard to follow.
+// Supposed to just track the states based on subscriptions, so make sure all subscriptions/values are handled
+
+//TODO: Get it back to mojo in sysInfo subscription
+//TODO: split out generic linked list, use for clients list too
 
 #define DBUS_MOBILE_HOTSPOT "luna://com.palm.mobilehotspot"
 #define DBUS_NETROUTE "luna://com.palm.netroute"
 #define DBUS_DHCP "luna://com.palm.dhcp"
+
+// TODO: Smooth/verify subscriptions and cancellability
+// Just subscribe to them all at the beginning rather than when needed, 
+// which will be better for tracking states too
+struct subscription {
+  LSFilterFunc callback;
+  bool subscribed;
+};
+
+struct subscription dhcp_lease = {lease_callback, false};
+struct subscription interface_status = {iface_status_callback, false};
+struct subscription bluetooth = {bt_callback, false};
 
 bool version(LSHandle *sh, LSMessage *msg, void *ctx) {
   LSError lserror;
@@ -107,7 +123,11 @@ struct interface *get_iface(char *ifname, char *type) {
 }
 
 bool lease_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
-  //TODO: Get it back to mojo in sysInfo subscription
+  //TODO: Only if you have leases enable the ip forward
+  dhcp_lease.subscribed = true;
+  if (!get_ip_forward_state()) {
+    toggle_ip_forward_state();
+  }
   return true;
 }
 
@@ -122,11 +142,10 @@ bool remove_netif_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
   json_get_bool(object, "returnValue", &ret);
 
   if (ret) {
-    if (ifaceInfo.ip_state == REMOVE_REQUESTED) {
-      pthread_mutex_lock(&ifaceInfo.mutex);
+    pthread_mutex_lock(&ifaceInfo.mutex);
+    if (ifaceInfo.ip_state == REMOVE_REQUESTED)
       ifaceInfo.ip_state = REMOVED;
-      pthread_mutex_unlock(&ifaceInfo.mutex);
-    }
+    pthread_mutex_unlock(&ifaceInfo.mutex);
   }
 
   return true;
@@ -164,7 +183,7 @@ bool dhcp_final_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
     }
   }
   else {
-    /* Else what?  Else bad design leaves you with not knowing WTF the last state was :( */
+    /* Fix the handling of return false everywhere */
   }
 
   return true;
@@ -184,7 +203,8 @@ bool dhcp_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
     ifaceInfo.dhcp_state = STARTED;
     pthread_mutex_unlock(&ifaceInfo.mutex);
 
-    LS_PRIV_SUBSCRIBE("dhcp/server/leaseInformation", lease_callback);
+    if (!dhcp_lease.subscribed)
+      LS_PRIV_SUBSCRIBE("dhcp/server/leaseInformation", dhcp_lease.callback);
   }
 }
 
@@ -280,6 +300,8 @@ bool iface_status_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
   LINK_STATE link_state = UNKNOWN;
   json_t *object;
 
+  interface_status.subscribed = true;
+  syslog(LOG_DEBUG, "wifi status callback");
   object = json_parse_document(LSMessageGetPayload(msg));
   json_get_bool(object, "returnValue", &ret);
 
@@ -300,6 +322,8 @@ bool iface_status_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
       syslog(LOG_DEBUG, "bridge_state %d", iface->bridge_state);
       if (link_state == UP && iface->bridge_state != BRIDGED)
         add_bridge(iface);
+      if (link_state == DOWN)
+        iface->bridge_state = UNBRIDGED;
     }
   }
 
@@ -401,7 +425,8 @@ bool create_ap_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
       strcpy(iface->ifname, ifname);
       iface->iface_state = CREATED;
       pthread_mutex_unlock(&ifaceInfo.ifaces[0].mutex);
-      LS_PRIV_SUBSCRIBE("wifi/interfaceStatus", iface_status_callback);
+      if (!interface_status.subscribed)
+        LS_PRIV_SUBSCRIBE("wifi/interfaceStatus", interface_status.callback);
     }
   }
   else {
@@ -560,6 +585,7 @@ bool bt_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
   char *status = NULL;
   LINK_STATE link_state = UNKNOWN;
 
+  bluetooth.subscribed = true;
   object = json_parse_document(LSMessageGetPayload(msg));
   json_get_string(object, "ifname", &ifname);
   json_get_string(object, "status", &status);
@@ -639,7 +665,8 @@ bool interfaceAdd(LSHandle *sh, LSMessage *msg, void *ctx) {
   }
   else if (!strcmp(type, "bluetooth")) {
     // TODO: Check if already enabled/subscribed first
-    LS_PRIV_SUBSCRIBE("bluetooth/pan/subscribenotifications", bt_callback);
+    if (!bluetooth.subscribed)
+      LS_PRIV_SUBSCRIBE("bluetooth/pan/subscribenotifications", bluetooth.callback);
   }
   else if (!strcmp(type, "usb")) {
     json_get_string(object, "ifname", &ifname);
