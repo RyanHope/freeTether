@@ -31,7 +31,7 @@ static int sys_info_init() {
 }
 
 void cleanup() {
-  ip_forward_cleanup();
+  pthread_cancel(ipmon_tid);
 }
 
 void sighandler(int sig) {
