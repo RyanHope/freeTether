@@ -2,7 +2,6 @@
 #include <stdio.h>
 #include <string.h>
 #include <syslog.h>
-#include <sys/mount.h>
 #include <sys/inotify.h>
 
 #include "luna_methods.h"
