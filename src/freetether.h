@@ -38,6 +38,13 @@ typedef enum {
 struct client {
   char *mac;
   char *hostname;
+  struct client *next;
+};
+
+struct wifi_ap {
+  char *ssid;
+  char *security;
+  char *passphrase;
 };
 
 struct interface {
@@ -45,11 +52,9 @@ struct interface {
   IFACE_STATE iface_state;
   BRIDGE_STATE bridge_state;
   LINK_STATE link_state;
+  struct wifi_ap *ap;
   char *type;
-  char *ssid;
-  char *security;
-  char *passphrase;
-  // TODO: struct client *clients;
+  struct client *clients;
   pthread_mutex_t mutex;
   struct interface *next;
 };

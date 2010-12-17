@@ -31,27 +31,178 @@ struct subscription {
 struct subscription dhcp_lease = {lease_callback, false};
 struct subscription interface_status = {iface_status_callback, false};
 struct subscription bluetooth = {bt_callback, false};
+struct subscription btmonitor = {btmon_callback, false};
 
-bool version(LSHandle *sh, LSMessage *msg, void *ctx) {
+static char *ipstate_str() {
+  switch(ifaceInfo.ip_state) {
+    case REMOVED:
+      return "REMOVED";
+      break;
+    case ASSIGN_REQUESTED:
+      return "ASSIGN REQUESTED";
+      break;
+    case ASSIGNED:
+      return "ASSIGNED";
+      break;
+    case REMOVE_REQUESTED:
+      return "REMOVE REQUESTED";
+      break;
+    default:
+      return "ERROR";
+      break;
+  }
+}
+
+static char *dhcpstate_str() {
+  switch(ifaceInfo.dhcp_state) {
+    case STOPPED:
+      return "STOPPED";
+      break;
+    case START_REQUESTED:
+      return "START REQUESTED";
+      break;
+    case STARTED:
+      return "STARTED";
+      break;
+    case STOP_REQUESTED:
+      return "STOP REQUESTED";
+      break;
+    default:
+      return "ERROR";
+      break;
+  }
+}
+
+static char *ifacestate_str(struct interface *iface) {
+  switch(iface->iface_state) {
+    case DESTROYED:
+      return "DESTROYED";
+      break;
+    case CREATE_REQUESTED:
+      return "CREATE REQUESTED";
+      break;
+    case CREATED:
+      return "CREATED";
+      break;
+    case DESTROY_REQUESTED:
+      return "DESTROY REQUESTED";
+      break;
+  }
+}
+
+static char *bridgestate_str(struct interface *iface) {
+  switch(iface->bridge_state) {
+    case UNBRIDGED:
+      return "UNBRIDGED";
+      break;
+    case BRIDGED:
+      return "BRIDGED";
+      break;
+    default:
+      return "ERROR";
+      break;
+  }
+}
+
+static char *linkstate_str(struct interface *iface) {
+  switch(iface->link_state) {
+    case UNKNOWN:
+      return "UNKNOWN";
+      break;
+    case UP:
+      return "UP";
+      break;
+    case DOWN:
+      return "DOWN";
+      break;
+    default:
+      return "ERROR";
+      break;
+  }
+}
+
+static char *generate_sysinfo_json() {
+  struct interface *iface = ifaceInfo.ifaces;
+  char *payload;
+
+  asprintf(&payload,
+      "\"sysinfo\": { "\
+        "\"ifbridge\": \"%s\", "\
+        "\"IPv4Address\": \"%s\", "\
+        "\"IPv4Subnet\": \"%s\", "\
+        "\"IPv4PoolStart\": \"%s\", "\
+        "\"stateIPv4\": \"%s\", "\
+        "\"stateDHCPServer\": \"%s\", "\
+        "\"interfaces\": [",
+        ifaceInfo.bridge, ifaceInfo.ip, ifaceInfo.subnet, ifaceInfo.poolstart, ipstate_str(), dhcpstate_str());
+
+  while (iface) {
+    asprintf(&payload, "%s { "\
+        "\"ifname\": \"%s\", "\
+        "\"stateInterface\": \"%s\", "\
+        "\"stateInterfaceBridged\": \"%s\", "\
+        "\"stateLink\": \"%s\", "\
+        "\"type\": \"%s\", ",
+        payload, iface->ifname, ifacestate_str(iface), bridgestate_str(iface), linkstate_str(iface), 
+        iface->type);
+
+    if (!strcmp(iface->type, "WiFi")) {
+      asprintf(&payload, "%s \"SSID\": \"%s\", \"Security\": \"%s\"",
+          payload, iface->ap->ssid, iface->ap->security);
+      }
+
+    if (iface->next)
+      asprintf(&payload, "%s },", payload);
+    else
+      asprintf(&payload, "%s } ] }", payload);
+
+    iface = iface->next;
+  }
+
+  return payload;
+}
+
+static void sysinfo_response() {
   LSError lserror;
   LSErrorInit(&lserror);
+  char *payload;
 
-  LSMessageReply(sh, msg, "{\"returnValue:\": true}", &lserror);
-  return true;
+  payload = generate_sysinfo_json();
+  asprintf(&payload, "\"returnValue\": true, %s", payload);
+
+  if (payload) {
+    LSSubscriptionRespond(serviceHandle, "/sysInfo", payload, &lserror);
+    free(payload);
+  }
 }
 
 static void free_iface(struct interface *iface) {
   if (iface) {
+    struct client *client = iface->clients;
+    struct client *prev = iface->clients;
     if (iface->ifname)
       free(iface->ifname);
     if (iface->type)
       free(iface->type);
-    if (iface->ssid)
-      free(iface->ssid);
-    if (iface->security)
-      free(iface->security);
-    if (iface->passphrase)
-      free(iface->passphrase);
+    if (iface->ap) {
+      if (iface->ap->ssid)
+        free(iface->ap->ssid);
+      if (iface->ap->security)
+        free(iface->ap->security);
+      if (iface->ap->passphrase)
+        free(iface->ap->passphrase);
+    }
+    
+    while (client) {
+      if (client->mac)
+        free(client->mac);
+      if (client->hostname)
+        free(client->hostname);
+
+      prev = client;
+      client = client->next;
+      free(prev);
+    }
 
     free(iface);
   }
@@ -122,12 +273,104 @@ struct interface *get_iface(char *ifname, char *type) {
   return iface;
 }
 
-bool lease_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
-  //TODO: Only if you have leases enable the ip forward
-  dhcp_lease.subscribed = true;
-  if (!get_ip_forward_state()) {
-    toggle_ip_forward_state();
+void add_client(struct interface *iface, char *mac, char *hostname) {
+  struct client *iter = NULL;
+  struct client *client = NULL;
+
+  if (!iface || !mac) {
+    syslog(LOG_DEBUG, "Error add_client called with iface %p, mac %p\n", iface, mac);
+    return;
   }
+
+  client = calloc(1, sizeof (struct client));
+  if (!client) {
+    syslog(LOG_ERR, "ERROR: Unable to allocate memory for client!");
+    return;
+  }
+
+  iter = iface->clients;
+  if (!iter) {
+    iface->clients = client;
+  }
+  else {
+    while (iter->next) {
+      iter = iter->next;
+    }
+    iter->next = client;
+  }
+}
+
+void free_clients(struct interface *iface) {
+  struct client *client = iface->clients;
+  struct client *prev;
+  while (client) {
+    if (client->mac)
+      free(client->mac);
+    if (client->hostname)
+      free(client->hostname);
+
+    prev = client;
+    client = client->next;
+    free(prev);
+  }
+}
+
+void update_clients(struct interface *iface, json_t *object) {
+  if (object && object->child && object->child->type == JSON_ARRAY && object->child->child) {
+    json_t *client = object->child->child;
+
+    // Just free and regenerate, make life easier
+    free_clients(iface);
+
+    while (client) {
+      char *mac, *hostname = NULL;
+      json_t *wifi_client = json_find_first_label(client, "clientInfo");
+
+      if (wifi_client && wifi_client->child) {
+        json_get_string(wifi_client->child, "macAddress", &mac);
+      }
+      else {
+        json_get_string(client, "macAddress", &mac);
+        json_get_string(client, "hostName", &hostname);
+      }
+
+      add_client(iface, mac, hostname);
+    }
+  }
+}
+
+bool lease_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
+  LSError lserror;
+  LSErrorInit(&lserror);
+  json_t *object;
+  bool returnValue = false;
+  json_t *leases;
+
+  object = json_parse_document(LSMessageGetPayload(msg));
+  json_get_bool(object, "returnValue", &returnValue);
+
+  if (returnValue) {
+    if (!dhcp_lease.subscribed)
+      leases = json_find_first_label(object, "interfaceList");
+    else
+      leases = json_find_first_label(object, "leases");
+
+    if (LSMessageIsSubscription(msg))
+      dhcp_lease.subscribed = true;
+
+    // leases first child should be an array.  
+    // If that array has at least one child then toggle ip forward on
+    if (leases && leases->child && leases->child->child) {
+      if (!get_ip_forward_state())
+        toggle_ip_forward_state();
+    }
+  }
+  else {
+    // if (LSMessageIsSubscription(msg))
+    dhcp_lease.subscribed = false;
+    ifaceInfo.dhcp_state = STOPPED;
+  }
+
   return true;
 }
 
@@ -293,19 +536,19 @@ void add_bridge(struct interface *iface) {
 bool iface_status_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
   LSError lserror;
   LSErrorInit(&lserror);
-  bool ret = false;
+  bool returnValue = false;
   char *ifname = NULL;
   char *state = NULL;
   struct interface *iface;
   LINK_STATE link_state = UNKNOWN;
   json_t *object;
 
-  interface_status.subscribed = true;
-  syslog(LOG_DEBUG, "wifi status callback");
   object = json_parse_document(LSMessageGetPayload(msg));
-  json_get_bool(object, "returnValue", &ret);
+  json_get_bool(object, "returnValue", &returnValue);
 
-  if (ret) {
+  if (returnValue) {
+    if (LSMessageIsSubscription(msg))
+      interface_status.subscribed = true;
     json_get_string(object, "ifname", &ifname);
     json_get_string(object, "state", &state);
     if (ifname && state) {
@@ -324,7 +567,13 @@ bool iface_status_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
         add_bridge(iface);
       if (link_state == DOWN)
         iface->bridge_state = UNBRIDGED;
+
+      update_clients(iface, json_find_first_label(object, "clientList"));
     }
+  }
+  else {
+    // if (LSMessageIsSubscription(msg))
+    interface_status.subscribed = false;
   }
 
   return true;
@@ -421,8 +670,7 @@ bool create_ap_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
 
     if (iface && ifname) {
       pthread_mutex_lock(&ifaceInfo.ifaces[0].mutex);
-      iface->ifname = malloc(strlen(ifname) + 1);
-      strcpy(iface->ifname, ifname);
+      iface->ifname = strdup(ifname);
       iface->iface_state = CREATED;
       pthread_mutex_unlock(&ifaceInfo.ifaces[0].mutex);
       if (!interface_status.subscribed)
@@ -497,7 +745,7 @@ bool interfaceRemove(LSHandle *sh, LSMessage *msg, void *ctx) {
   return true;
 }
 
-struct interface * request_interface(char *type, char *ifname, char *ssid, char *security, char *passphrase) {
+struct interface *request_interface(char *type, char *ifname, struct wifi_ap *ap) {
   LSError lserror;
   LSErrorInit(&lserror);
   struct interface *iface = NULL;
@@ -529,52 +777,87 @@ struct interface * request_interface(char *type, char *ifname, char *ssid, char 
   pthread_mutex_init(&iface->mutex, NULL);
   pthread_mutex_lock(&iface->mutex);
   iface->iface_state = CREATE_REQUESTED;
-  if (type) {
-    iface->type = malloc(strlen(type) + 1);
-    strcpy(iface->type, type);
-  }
 
-  if (ssid) {
-    iface->ssid = malloc(strlen(ssid) + 1);
-    strcpy(iface->ssid, ssid);
-  }
+  if (type)
+    iface->type = strdup(type);
+  if (ifname)
+    iface->ifname = strdup(ifname);
+  if (ap)
+    iface->ap = ap;
 
-  if (security) {
-    iface->security = malloc(strlen(security) + 1);
-    strcpy(iface->security, security);
-  }
-
-  if (passphrase) {
-    iface->passphrase = malloc(strlen(passphrase) + 1);
-    strcpy(iface->passphrase, passphrase);
-  }
-
-  if (ifname) {
-    iface->ifname = malloc(strlen(ifname) + 1);
-    strcpy(iface->ifname, ifname);
-  }
   pthread_mutex_unlock(&iface->mutex);
 
   if (!strcmp(type, "WiFi")) {
-    asprintf(&payload, "{\"SSID\": \"%s\", \"Security\": \"%s\"", ssid, security);
+    asprintf(&payload, "{\"SSID\": \"%s\", \"Security\": \"%s\"", ap->ssid, ap->security);
 
-    if (passphrase /* && not Open ? */)
-      asprintf(&payload, "%s, \"Passphrase\": %s", payload, passphrase);
+    if (ap->passphrase /* && not Open ? */)
+      asprintf(&payload, "%s, \"Passphrase\": %s", payload, ap->passphrase);
 
     asprintf(&payload, "%s}", payload);
-  }
-  else {
-    asprintf(&payload, "{\"type\": \"bluetooth\", \"ifname\": \"%s\"}", iface->ifname);
-  }
 
-  if (!payload)
-    return NULL;
+    if (!payload)
+      return NULL;
 
-  LSCall(priv_serviceHandle, "palm://com.palm.wifi/createAP", payload, create_ap_callback, 
-      NULL, NULL, &lserror);
+    LSCall(priv_serviceHandle, "palm://com.palm.wifi/createAP", payload, 
+        create_ap_callback, NULL, NULL, &lserror);
+  }
 
   free(payload);
   return iface;
+}
+
+bool btmon_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
+  LSError lserror;
+  LSErrorInit(&lserror);
+  json_t *object;
+  bool returnValue = false;
+
+  object = json_parse_document(LSMessageGetPayload(msg));
+  json_get_bool(object, "returnValue", &returnValue);
+
+  if (returnValue) {
+    char *radio;
+
+    if (LSMessageIsSubscription(msg))
+      btmonitor.subscribed = true;
+
+    json_get_string(object, "radio", &radio);
+    if (radio && !strcmp(radio, "on") && !bluetooth.subscribed) {
+      LS_PRIV_SUBSCRIBE("bluetooth/pan/subscribenotifications", bluetooth.callback);
+    }
+    else {
+      char *notification;
+
+      json_get_string(object, "notification", &notification);
+      if (notification && !strcmp(notification, "notifnradioon") && !bluetooth.subscribed)
+        LS_PRIV_SUBSCRIBE("bluetooth/pan/subscribenotifications", bluetooth.callback);
+    }
+
+  }
+  else {
+    // if (LSMessageIsSubscription(msg))
+    btmonitor.subscribed = false;
+  }
+
+  return true;
+}
+
+bool disable_wifi_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
+  LSError lserror;
+  LSErrorInit(&lserror);
+  json_t *object;
+  bool returnValue = false;
+  struct wifi_ap *ap;
+  
+  object = json_parse_document(LSMessageGetPayload(msg));
+  json_get_bool(object, "returnValue", &returnValue);
+
+  if (returnValue) {
+    ap = (struct wifi_ap *)ctx;
+    request_interface("WiFi", NULL, ap);
+  }
+  
+  return true;
 }
 
 bool bt_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
@@ -597,7 +880,7 @@ bool bt_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
       json_t *clientlist = json_find_first_label(object, "clientList");
 
       link_state = UP;
-      iface = request_interface("bluetooth", ifname, NULL, NULL, NULL);
+      iface = request_interface("bluetooth", ifname, NULL);
       if (link_state == UP && iface->bridge_state != BRIDGED)
         add_bridge(iface);
 
@@ -636,6 +919,7 @@ bool interfaceAdd(LSHandle *sh, LSMessage *msg, void *ctx) {
   }
 
   if (!strcmp(type, "wifi")) {
+    struct wifi_ap *ap;
     char *ssid = NULL;
     char *security = NULL;
     char *passphrase = NULL;
@@ -657,16 +941,25 @@ bool interfaceAdd(LSHandle *sh, LSMessage *msg, void *ctx) {
       strcpy(security, "Open");
     }
 
-    LSCall(priv_serviceHandle, "palm://com.palm.wifi/setstate", "{\"state\": \"disabled\"}", 
-        NULL, NULL, NULL, &lserror);
+    ap = malloc(sizeof(struct wifi_ap));
+    if (!ap) {
+      LS_REPLY_ERROR("Out of memory");
+      return true;
+    }
 
-    // TODO: Add check for passphrase length
-    request_interface("WiFi", NULL, ssid, security, passphrase);
+    if (ssid)
+      ap->ssid = strdup(ssid);
+    if (security)
+      ap->security = strdup(security);
+    if (passphrase)
+      ap->passphrase = strdup(passphrase);
+
+    LSCall(priv_serviceHandle, "palm://com.palm.wifi/setstate", "{\"state\": \"disabled\"}", 
+        disable_wifi_callback, (void*)ap, NULL, &lserror);
   }
   else if (!strcmp(type, "bluetooth")) {
-    // TODO: Check if already enabled/subscribed first
-    if (!bluetooth.subscribed)
-      LS_PRIV_SUBSCRIBE("bluetooth/pan/subscribenotifications", bluetooth.callback);
+    if (!btmonitor.subscribed)
+      LS_PRIV_SUBSCRIBE("btmonitor/monitor/subscribenotifications", btmonitor.callback);
   }
   else if (!strcmp(type, "usb")) {
     json_get_string(object, "ifname", &ifname);
@@ -675,7 +968,7 @@ bool interfaceAdd(LSHandle *sh, LSMessage *msg, void *ctx) {
       return true;
     }
 
-    request_interface("bluetooth", ifname, NULL, NULL, NULL);
+    request_interface("usb", ifname, NULL);
   }
   else {
     LS_REPLY_ERROR("Invalid Interface type specified");
@@ -686,14 +979,49 @@ bool interfaceAdd(LSHandle *sh, LSMessage *msg, void *ctx) {
   return true;
 }
 
+bool sysInfo(LSHandle *sh, LSMessage *msg, void *ctx) {
+  LSError lserror;
+  LSErrorInit(&lserror);
+  char *payload;
+  bool subscribed = false;
+
+  payload = generate_sysinfo_json();
+  asprintf(&payload, "\"returnValue\": true, \"subscribed\": true, %s", payload);
+
+  LSSubscriptionProcess(sh, msg, &subscribed, &lserror);
+
+  if (payload) {
+    LSMessageReply(sh, msg, payload, &lserror);
+    free(payload);
+  }
+  else {
+    LSMessageReply(sh, msg, "{\"returnValue\": false}", &lserror);
+  }
+
+  if (LSErrorIsSet(&lserror)) {
+    LSErrorPrint(&lserror, stderr);
+    LSErrorFree(&lserror);
+  }
+
+  return true;
+}
+
+bool version(LSHandle *sh, LSMessage *msg, void *ctx) {
+  LSError lserror;
+  LSErrorInit(&lserror);
+
+  LSMessageReply(sh, msg, "{\"returnValue:\": true}", &lserror);
+  return true;
+}
+
 LSMethod luna_methods[] = {
   {"get_ip_forward", get_ip_forward},
   {"toggle_ip_forward", toggle_ip_forward},
   {"version", version},
   {"interfaceAdd", interfaceAdd},
   {"interfaceRemove", interfaceRemove},
-#if 0
   {"sysInfo", sysInfo},
+#if 0
   {"clientList", clientList},
   {"configRead", configRead},
   {"configWrite", configWrite},
@@ -701,15 +1029,6 @@ LSMethod luna_methods[] = {
 #endif
   { NULL, NULL},
 };
-
-#if 0
-void early_subscriptions() {
-  LSError lserror;
-  LSErrorInit(&lserror);
-
-  LS_PRIV_SUBSCRIBE("bluetooth/pan/subscribenotifications", bt_callback);
-}
-#endif
 
 bool register_methods(LSPalmService *serviceHandle, LSError lserror) {
 	return LSPalmServiceRegisterCategory(serviceHandle, "/", luna_methods,

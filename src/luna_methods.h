@@ -9,6 +9,7 @@ bool register_methods(LSPalmService *serviceHandle, LSError lserror);
 bool lease_callback(LSHandle *sh, LSMessage *msg, void *ctx);
 bool iface_status_callback(LSHandle *sh, LSMessage *msg, void *ctx);
 bool bt_callback(LSHandle *sh, LSMessage *msg, void *ctx);
+bool btmon_callback(LSHandle *sh, LSMessage *msg, void *ctx);
 bool toggle_ip_forward(LSHandle* lshandle, LSMessage *message, void *ctx);
 bool get_ip_forward(LSHandle* lshandle, LSMessage *message, void *ctx);
 
