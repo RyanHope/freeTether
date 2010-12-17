@@ -142,12 +142,12 @@ static char *generate_sysinfo_json() {
         "\"stateInterface\": \"%s\", "\
         "\"stateInterfaceBridged\": \"%s\", "\
         "\"stateLink\": \"%s\", "\
-        "\"type\": \"%s\", ",
+        "\"type\": \"%s\"",
         payload, iface->ifname, ifacestate_str(iface), bridgestate_str(iface), linkstate_str(iface), 
         iface->type);
 
     if (!strcmp(iface->type, "WiFi")) {
-      asprintf(&payload, "%s \"SSID\": \"%s\", \"Security\": \"%s\"",
+      asprintf(&payload, "%s, \"SSID\": \"%s\", \"Security\": \"%s\"",
           payload, iface->ap->ssid, iface->ap->security);
       }
 
@@ -240,16 +240,6 @@ struct interface *get_destroy_iface() {
   return iface;
 }
 
-struct interface *get_requested_iface() {
-  struct interface *iface = ifaceInfo.ifaces;
-
-  while (iface && iface->iface_state != CREATE_REQUESTED) {
-    iface = iface->next;
-  }
-
-  return iface;
-}
-
 struct interface *get_iface(char *ifname, char *type) {
   struct interface *iface = ifaceInfo.ifaces;
 
@@ -302,8 +292,7 @@ void add_client(struct interface *iface, char *mac, char *hostname) {
   }
 }
 
-void free_clients(struct interface *iface) {
-  struct client *client = iface->clients;
+void free_clients(struct client *client) {
   struct client *prev;
   while (client) {
     if (client->mac)
@@ -322,7 +311,7 @@ void update_clients(struct interface *iface, json_t *object) {
     json_t *client = object->child->child;
 
     // Just free and regenerate, make life easier
-    free_clients(iface);
+    free_clients(iface->clients);
 
     while (client) {
       char *mac, *hostname = NULL;
@@ -373,6 +362,7 @@ bool lease_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
     ifaceInfo.dhcp_state = STOPPED;
   }
 
+  sysinfo_response();
   return true;
 }
 
@@ -393,6 +383,7 @@ bool remove_netif_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
     pthread_mutex_unlock(&ifaceInfo.mutex);
   }
 
+  sysinfo_response();
   return true;
 }
 
@@ -431,6 +422,7 @@ bool dhcp_final_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
     /* Fix the handling of return false everywhere */
   }
 
+  sysinfo_response();
   return true;
 }
 
@@ -449,8 +441,11 @@ bool dhcp_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
     pthread_mutex_unlock(&ifaceInfo.mutex);
 
     if (!dhcp_lease.subscribed)
-      LS_PRIV_SUBSCRIBE("dhcp/server/leaseInformation", dhcp_lease.callback);
+      LS_PRIV_SUBSCRIBE("dhcp/server/leaseInformation", dhcp_lease.callback, NULL);
   }
+
+  sysinfo_response();
+  return true;
 }
 
 bool netif_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
@@ -485,6 +480,7 @@ bool netif_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
     }
   }
 
+  sysinfo_response();
   return true;
 }
 
@@ -541,7 +537,7 @@ bool iface_status_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
   bool returnValue = false;
   char *ifname = NULL;
   char *state = NULL;
-  struct interface *iface;
+  struct interface *iface = (struct interface *)ctx;
   LINK_STATE link_state = UNKNOWN;
   json_t *object;
 
@@ -551,22 +547,23 @@ bool iface_status_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
   if (returnValue) {
     if (LSMessageIsSubscription(msg))
       interface_status.subscribed = true;
+
     json_get_string(object, "ifname", &ifname);
     json_get_string(object, "state", &state);
+
     if (ifname && state) {
       if (!strcmp(state, "down"))
         link_state = DOWN;
       if (!strcmp(state, "up"))
         link_state = UP;
 
-      iface = get_iface(ifname, NULL);
       pthread_mutex_lock(&iface->mutex);
       iface->link_state = link_state;
       pthread_mutex_unlock(&iface->mutex);
-      syslog(LOG_DEBUG, "link_state %d", link_state);
-      syslog(LOG_DEBUG, "bridge_state %d", iface->bridge_state);
+
       if (link_state == UP && iface->bridge_state != BRIDGED)
         add_bridge(iface);
+
       if (link_state == DOWN)
         iface->bridge_state = UNBRIDGED;
 
@@ -578,6 +575,7 @@ bool iface_status_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
     interface_status.subscribed = false;
   }
 
+  sysinfo_response();
   return true;
 }
 
@@ -652,6 +650,7 @@ bool delete_ap_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
     }
   }
 
+  sysinfo_response();
   return true;
 }
 
@@ -660,15 +659,15 @@ bool create_ap_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
   LSErrorInit(&lserror);
   json_t *object;
   struct interface *iface = NULL;
-  bool ret = false;
+  bool returnValue = false;
   char *ifname = NULL;
 
   object = json_parse_document(LSMessageGetPayload(msg));
-  json_get_bool(object, "returnValue", &ret);
+  json_get_bool(object, "returnValue", &returnValue);
+  iface = (struct interface *)ctx;
 
-  if (ret) {
+  if (returnValue) {
     json_get_string(object, "ifname", &ifname);
-    iface = get_requested_iface();
 
     if (iface && ifname) {
       pthread_mutex_lock(&ifaceInfo.ifaces[0].mutex);
@@ -676,13 +675,14 @@ bool create_ap_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
       iface->iface_state = CREATED;
       pthread_mutex_unlock(&ifaceInfo.ifaces[0].mutex);
       if (!interface_status.subscribed)
-        LS_PRIV_SUBSCRIBE("wifi/interfaceStatus", interface_status.callback);
+        LS_PRIV_SUBSCRIBE("wifi/interfaceStatus", interface_status.callback, ctx);
     }
   }
   else {
-    delete_requested_iface();
+    remove_iface(iface);
   }
 
+  sysinfo_response();
   return true;
 }
 
@@ -801,7 +801,7 @@ struct interface *request_interface(char *type, char *ifname, struct wifi_ap *ap
       return NULL;
 
     LSCall(priv_serviceHandle, "palm://com.palm.wifi/createAP", payload, 
-        create_ap_callback, NULL, NULL, &lserror);
+        create_ap_callback, (void *)iface, NULL, &lserror);
   }
 
   free(payload);
@@ -825,14 +825,14 @@ bool btmon_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
 
     json_get_string(object, "radio", &radio);
     if (radio && !strcmp(radio, "on") && !bluetooth.subscribed) {
-      LS_PRIV_SUBSCRIBE("bluetooth/pan/subscribenotifications", bluetooth.callback);
+      LS_PRIV_SUBSCRIBE("bluetooth/pan/subscribenotifications", bluetooth.callback, ctx);
     }
     else {
       char *notification;
 
       json_get_string(object, "notification", &notification);
       if (notification && !strcmp(notification, "notifnradioon") && !bluetooth.subscribed)
-        LS_PRIV_SUBSCRIBE("bluetooth/pan/subscribenotifications", bluetooth.callback);
+        LS_PRIV_SUBSCRIBE("bluetooth/pan/subscribenotifications", bluetooth.callback, ctx);
     }
 
   }
@@ -865,41 +865,49 @@ bool disable_wifi_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
 bool bt_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
   LSError lserror;
   LSErrorInit(&lserror);
-  json_t *object;
+  bool returnValue = false;
   char *ifname = NULL;
   char *status = NULL;
+  struct interface *iface = (struct interface *)ctx;
   LINK_STATE link_state = UNKNOWN;
+  json_t *object;
 
-  bluetooth.subscribed = true;
   object = json_parse_document(LSMessageGetPayload(msg));
-  json_get_string(object, "ifname", &ifname);
-  json_get_string(object, "status", &status);
-  // Retrieve from json clientList: [macAddress: , hostName: ]
+  json_get_bool(object, "returnValue", &returnValue);
 
-  if (ifname && status) {
-    if (!strcmp(status, "connected")) {
-      struct interface *iface;
-      json_t *clientlist = json_find_first_label(object, "clientList");
+  if (returnValue) {
+    if (LSMessageIsSubscription(msg))
+      bluetooth.subscribed = true;
 
-      link_state = UP;
-      iface = request_interface("bluetooth", ifname, NULL);
+    json_get_string(object, "ifname", &ifname);
+    json_get_string(object, "status", &status);
+
+    if (ifname && status) {
+      if (!strcmp(status, "connected"))
+        link_state = UP;
+      if (!strcmp(status, "disconnected"))
+        link_state = DOWN;
+
+      pthread_mutex_lock(&iface->mutex);
+      iface->link_state = link_state;
+      pthread_mutex_unlock(&iface->mutex);
+
       if (link_state == UP && iface->bridge_state != BRIDGED)
         add_bridge(iface);
 
-      if (clientlist && clientlist->child && clientlist->child->child) {
-        char *mac;
+      if (link_state == DOWN)
+        iface->bridge_state = UNBRIDGED;
 
-        // TODO: fix to build client list of mac/hostnames to report
-        json_get_string(clientlist->child->child, "macAddress", &mac);
-        syslog(LOG_DEBUG, "first client mac %s\n", mac);
-      }
-    }
-    else {
-      link_state = DOWN;
-      // TODO: clean up connections?
+      update_clients(iface, json_find_first_label(object, "clientList"));
     }
   }
+  else {
+    // if (LSMessageIsSubscription(msg))
+    bluetooth.subscribed = false;
+    remove_iface(iface);
+  }
 
+  sysinfo_response();
   return true;
 }
 
@@ -960,8 +968,9 @@ bool interfaceAdd(LSHandle *sh, LSMessage *msg, void *ctx) {
         disable_wifi_callback, (void*)ap, NULL, &lserror);
   }
   else if (!strcmp(type, "bluetooth")) {
+    struct interface *iface = request_interface("bluetooth", NULL, NULL);
     if (!btmonitor.subscribed)
-      LS_PRIV_SUBSCRIBE("btmonitor/monitor/subscribenotifications", btmonitor.callback);
+      LS_PRIV_SUBSCRIBE("btmonitor/monitor/subscribenotifications", btmonitor.callback, (void *)iface);
   }
   else if (!strcmp(type, "usb")) {
     json_get_string(object, "ifname", &ifname);

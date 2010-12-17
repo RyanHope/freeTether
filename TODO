@@ -9,3 +9,5 @@
 * MOJO MOJO MOJO
 * dash/notifications
 * WebOS 2.0 - exhibition, just type, activity etc...
+* Fix the cleaning up and disconnecting states
+* LOTS of memory allocation, fine tooth comb for leaks!
