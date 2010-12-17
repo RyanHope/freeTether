@@ -88,7 +88,7 @@ MainAssistant.prototype.setup = function() {
 	this.controller.listen('tetherUSB', Mojo.Event.propertyChange, this.toggleChangeHandler);
 	 
   this.service.monitorServer("org.webosinternals.freetether", this.server.bind(this));
-  this.sysInfoSubscription = this.service.sysInfo({subscribe: true}, this.updateOptions.bind(this));
+  this.sysInfoSubscription = this.service.getStatus({subscribe: true}, this.updateOptions.bind(this));
 };
 
 MainAssistant.prototype.server = function(payload) {
@@ -98,26 +98,32 @@ MainAssistant.prototype.server = function(payload) {
 }
 
 MainAssistant.prototype.updateOptions = function(payload) {
+  Mojo.Log.error("update options callback!");
   if (!payload.returnValue) {
     this.wifiOptions.innerHTML = "ERROR<br>" + payload.errorText;
+    return;
   }
 
   this.wifiOptions.innerHTML = 
-    "bridge: " + payload.ifbridge + "<br>" + 
-    "ip: " + payload.IPv4Address + "<br>" + 
-    "ip state: " + payload.stateIPv4 + "<br>" + 
-    "dhcp state: " + payload.stateDHCPServer + "<br>" + 
+    "bridge: " + payload.sysInfo.ifbridge + "<br>" + 
+    "ip: " + payload.sysInfo.IPv4Address + "<br>" + 
+    "ip state: " + payload.sysInfo.stateIPv4 + "<br>" + 
+    "dhcp state: " + payload.sysInfo.stateDHCPServer + "<br>" + 
     "interfaces: " + "<br>"; 
 
-  for (p in payload.interfaces) {
+  Mojo.Log.error("hey interfaces " + payload.sysInfo.interfaces[0]);
+  var i = 0;
+  while (payload.sysInfo.interfaces[i]) {
+    var p = payload.sysInfo.interfaces[i++];
     this.wifiOptions.innerHTML = this.wifiOptions.innerHTML + 
-      "  ifname: " + p.ifname + "<br>" + 
-      "  iface state: " + p.stateInterface + "<br>" + 
-      "  iface bridge state: " p.stateInterfaceBridge + "<br>" + 
-      "  link state: " + p.stateLink + "<br>" + 
-      "  type: " + p.type + "<br>" + 
-      "  ssid: " + p.SSID + "<br>" + 
-      "  security: " + p.Security + "<br>";
+      "-- Interface " + i + " --<br>" + 
+      "&nbsp&nbspifname: " + p.ifname + "<br>" + 
+      "&nbsp&nbspiface state: " + p.stateInterface + "<br>" + 
+      "&nbsp&nbspiface bridge state: " + p.stateInterfaceBridge + "<br>" + 
+      "&nbsp&nbsplink state: " + p.stateLink + "<br>" + 
+      "&nbsp&nbsptype: " + p.type + "<br>" + 
+      "&nbsp&nbspssid: " + p.SSID + "<br>" + 
+      "&nbsp&nbspsecurity: " + p.Security + "<br>";
   }
 }
 
@@ -197,7 +203,7 @@ MainAssistant.prototype.toggleChanged = function(event) {
       break;
     case 'tetherBT':
       if (event.value) {
-        this.service.addInterface({bluetooth});
+        this.service.addInterface({bluetooth:{}});
       }
       else {
         this.service.removeInterface({bluetooth: {ifname: "bsl0"}});
@@ -205,7 +211,7 @@ MainAssistant.prototype.toggleChanged = function(event) {
       break;
     case 'tetherUSB':
       if (event.value) {
-        this.service.addInterface({usb: {ifname: "usb0:1"});
+        this.service.addInterface({usb: {ifname: "usb0:1"}});
       }
       else {
         this.service.removeInterface({usb: {ifname: "usb0:1"}});

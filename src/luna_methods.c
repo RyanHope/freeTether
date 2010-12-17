@@ -126,7 +126,7 @@ static char *generate_sysinfo_json() {
   char *payload;
 
   asprintf(&payload,
-      "\"sysinfo\": { "\
+      "\"sysInfo\": { "\
         "\"ifbridge\": \"%s\", "\
         "\"IPv4Address\": \"%s\", "\
         "\"IPv4Subnet\": \"%s\", "\
@@ -154,10 +154,12 @@ static char *generate_sysinfo_json() {
     if (iface->next)
       asprintf(&payload, "%s },", payload);
     else
-      asprintf(&payload, "%s } ] }", payload);
+      asprintf(&payload, "%s }", payload);
 
     iface = iface->next;
   }
+
+  asprintf(&payload, "%s ] }", payload);
 
   return payload;
 }
@@ -168,7 +170,7 @@ static void sysinfo_response() {
   char *payload;
 
   payload = generate_sysinfo_json();
-  asprintf(&payload, "\"returnValue\": true, %s", payload);
+  asprintf(&payload, "{\"returnValue\": true, %s }", payload);
 
   if (payload) {
     LSSubscriptionRespond(serviceHandle, "/sysInfo", payload, &lserror);
@@ -986,7 +988,7 @@ bool sysInfo(LSHandle *sh, LSMessage *msg, void *ctx) {
   bool subscribed = false;
 
   payload = generate_sysinfo_json();
-  asprintf(&payload, "\"returnValue\": true, \"subscribed\": true, %s", payload);
+  asprintf(&payload, "{\"returnValue\": true, \"subscribed\": true, %s }", payload);
 
   LSSubscriptionProcess(sh, msg, &subscribed, &lserror);
 
