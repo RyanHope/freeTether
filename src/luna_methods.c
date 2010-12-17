@@ -736,7 +736,7 @@ bool interfaceRemove(LSHandle *sh, LSMessage *msg, void *ctx) {
         NULL, NULL, NULL, &lserror);
   }
 
-  // Only finalize and remove if there are no additional interfaces active
+  // TODO: Only finalize and remove if there are no additional interfaces active
   LSCall(priv_serviceHandle, "palm://com.palm.dhcp/interfaceFinalize", "{\"interface\":\"bridge0\"}", NULL, NULL, NULL, &lserror);
   LSCall(priv_serviceHandle, "palm://com.palm.netroute/removeNetIf", "{\"ifName\":\"bridge0\"}", NULL, NULL, NULL, &lserror);
 

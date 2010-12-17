@@ -88,12 +88,37 @@ MainAssistant.prototype.setup = function() {
 	this.controller.listen('tetherUSB', Mojo.Event.propertyChange, this.toggleChangeHandler);
 	 
   this.service.monitorServer("org.webosinternals.freetether", this.server.bind(this));
+  this.sysInfoSubscription = this.service.sysInfo({subscribe: true}, this.updateOptions.bind(this));
 };
 
 MainAssistant.prototype.server = function(payload) {
         for (p in payload) {
           Mojo.Log.error(p + " : " + payload[p]);
         }
+}
+
+MainAssistant.prototype.updateOptions = function(payload) {
+  if (!payload.returnValue) {
+    this.wifiOptions.innerHTML = "ERROR<br>" + payload.errorText;
+  }
+
+  this.wifiOptions.innerHTML = 
+    "bridge: " + payload.ifbridge + "<br>" + 
+    "ip: " + payload.IPv4Address + "<br>" + 
+    "ip state: " + payload.stateIPv4 + "<br>" + 
+    "dhcp state: " + payload.stateDHCPServer + "<br>" + 
+    "interfaces: " + "<br>"; 
+
+  for (p in payload.interfaces) {
+    this.wifiOptions.innerHTML = this.wifiOptions.innerHTML + 
+      "  ifname: " + p.ifname + "<br>" + 
+      "  iface state: " + p.stateInterface + "<br>" + 
+      "  iface bridge state: " p.stateInterfaceBridge + "<br>" + 
+      "  link state: " + p.stateLink + "<br>" + 
+      "  type: " + p.type + "<br>" + 
+      "  ssid: " + p.SSID + "<br>" + 
+      "  security: " + p.Security + "<br>";
+  }
 }
 
 MainAssistant.prototype.handleCommand = function(event) {
@@ -168,6 +193,22 @@ MainAssistant.prototype.toggleChanged = function(event) {
             SSID:"WebOS Testing",
           }
         }, f);
+      }
+      break;
+    case 'tetherBT':
+      if (event.value) {
+        this.service.addInterface({bluetooth});
+      }
+      else {
+        this.service.removeInterface({bluetooth: {ifname: "bsl0"}});
+      }
+      break;
+    case 'tetherUSB':
+      if (event.value) {
+        this.service.addInterface({usb: {ifname: "usb0:1"});
+      }
+      else {
+        this.service.removeInterface({usb: {ifname: "usb0:1"}});
       }
       break;
   }
