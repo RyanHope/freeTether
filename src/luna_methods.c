@@ -12,8 +12,7 @@
 // I believe this is how MHS does it.  The current implementation of keeping track of states via async callbacks and hopskotch 
 // is a little messy and hard to follow.
 // Supposed to just track the states based on subscriptions, so make sure all subscriptions/values are handled
-
-//TODO: Get it back to mojo in sysInfo subscription
+//
 //TODO: split out generic linked list, use for clients list too
 
 #define DBUS_MOBILE_HOTSPOT "luna://com.palm.mobilehotspot"
@@ -21,8 +20,6 @@
 #define DBUS_DHCP "luna://com.palm.dhcp"
 
 // TODO: Smooth/verify subscriptions and cancellability
-// Just subscribe to them all at the beginning rather than when needed, 
-// which will be better for tracking states too
 struct subscription {
   LSFilterFunc callback;
   bool subscribed;
@@ -686,7 +683,7 @@ bool create_ap_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
   return true;
 }
 
-int remove_interface(char *type, char *ifname) {
+int delete_ap(char *type, char *ifname) {
   LSError lserror;
   LSErrorInit(&lserror);
   char *payload = NULL;
@@ -730,20 +727,24 @@ bool interfaceRemove(LSHandle *sh, LSMessage *msg, void *ctx) {
   json_t *type_label = json_find_first_label(object, type);
   json_get_string(type_label->child, "ifname", &ifname);
 
-  remove_interface(type, ifname);
   if (!strcmp(type, "wifi")) {
-    LSCall(priv_serviceHandle, "palm://com.palm.wifi/deleteAP", "{\"ifname\":\"uap0\"}", 
-        NULL, NULL, NULL, &lserror);
+    delete_ap(type, ifname);
+    // TODO: move enable wifi to delete_ap callback 
     LSCall(priv_serviceHandle, "palm://com.palm.wifi/setstate", "{\"state\":\"enabled\"}", 
         NULL, NULL, NULL, &lserror);
   }
+  else {
+    remove_iface(get_iface(type, ifname));
+  }
 
-  // TODO: Only finalize and remove if there are no additional interfaces active
-  LSCall(priv_serviceHandle, "palm://com.palm.dhcp/interfaceFinalize", "{\"interface\":\"bridge0\"}", NULL, NULL, NULL, &lserror);
-  LSCall(priv_serviceHandle, "palm://com.palm.netroute/removeNetIf", "{\"ifName\":\"bridge0\"}", NULL, NULL, NULL, &lserror);
+  if (!ifaceInfo.ifaces) {
+    LSCall(priv_serviceHandle, "palm://com.palm.dhcp/interfaceFinalize",
+        "{\"interface\":\"bridge0\"}", NULL, NULL, NULL, &lserror);
+    LSCall(priv_serviceHandle, "palm://com.palm.netroute/removeNetIf",
+        "{\"ifName\":\"bridge0\"}", NULL, NULL, NULL, &lserror);
+  }
 
   LSMessageReply(sh, msg, "{\"returnValue\":true}", &lserror);
-
   return true;
 }
 
