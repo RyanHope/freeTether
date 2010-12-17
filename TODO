@@ -11,3 +11,5 @@
 * WebOS 2.0 - exhibition, just type, activity etc...
 * Fix the cleaning up and disconnecting states
 * LOTS of memory allocation, fine tooth comb for leaks!
+* Verify mutexes and put some around subscribe globals
+* Add some sort of emergency recover, start from scratch, wipe out all interfaces button for now

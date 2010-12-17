@@ -237,7 +237,7 @@ struct interface *get_destroy_iface() {
   return iface;
 }
 
-struct interface *get_iface(char *ifname, char *type) {
+struct interface *get_iface(char *type, char *ifname) {
   struct interface *iface = ifaceInfo.ifaces;
 
   if (!ifname && !type)
@@ -323,6 +323,7 @@ void update_clients(struct interface *iface, json_t *object) {
       }
 
       add_client(iface, mac, hostname);
+      client = client->next;
     }
   }
 }
@@ -432,6 +433,7 @@ bool dhcp_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
   object = json_parse_document(LSMessageGetPayload(msg));
   json_get_bool(object, "returnValue", &ret);
 
+  // TODO: will return false if already existing lease
   if (ret && ifaceInfo.dhcp_state == START_REQUESTED) {
     pthread_mutex_lock(&ifaceInfo.mutex);
     ifaceInfo.dhcp_state = STARTED;
@@ -449,32 +451,37 @@ bool netif_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
   LSError lserror;
   LSErrorInit(&lserror);
   json_t *object;
-  bool ret = FALSE;
+  bool returnValue = false;
 
   object = json_parse_document(LSMessageGetPayload(msg));
-  json_get_bool(object, "returnValue", &ret);
+  json_get_bool(object, "returnValue", &returnValue);
 
-  if (ret && ifaceInfo.ip_state == ASSIGN_REQUESTED) {
-    pthread_mutex_lock(&ifaceInfo.mutex);
-    ifaceInfo.ip_state = ASSIGNED;
-    if (ifaceInfo.dhcp_state != STARTED)
-      ifaceInfo.dhcp_state = START_REQUESTED;
-    pthread_mutex_unlock(&ifaceInfo.mutex);
+  if (returnValue) {
+    if (ifaceInfo.ip_state == ASSIGN_REQUESTED) {
+      pthread_mutex_lock(&ifaceInfo.mutex);
+      ifaceInfo.ip_state = ASSIGNED;
+      if (ifaceInfo.dhcp_state != STARTED)
+        ifaceInfo.dhcp_state = START_REQUESTED;
+      pthread_mutex_unlock(&ifaceInfo.mutex);
 
-    // TODO: less hard coding
-    if (ifaceInfo.dhcp_state == START_REQUESTED) {
-      LSCall(priv_serviceHandle, "luna://com.palm.dhcp/interfaceInitialize", "{ " \
-            "\"interface\":\"bridge0\", "\
-            "\"mode\":\"server\", "\
-            "\"ipv4Address\":\"10.1.1.11\", "\
-            "\"ipv4Subnet\":\"255.255.255.0\", "\
-            "\"ipv4Router\":\"10.1.1.11\", "\
-            "\"dnsServers\":[\"10.1.1.11\"], "\
-            "\"ipv4RangeStart\":\"10.1.1.50\", "\
-            "\"maxLeases\":15, "\
-            "\"leaseTime\":7200}", 
-            dhcp_callback, NULL, NULL, &lserror);
+      // TODO: less hard coding
+      if (ifaceInfo.dhcp_state == START_REQUESTED) {
+        LSCall(priv_serviceHandle, "luna://com.palm.dhcp/interfaceInitialize", "{ " \
+              "\"interface\":\"bridge0\", "\
+              "\"mode\":\"server\", "\
+              "\"ipv4Address\":\"10.1.1.11\", "\
+              "\"ipv4Subnet\":\"255.255.255.0\", "\
+              "\"ipv4Router\":\"10.1.1.11\", "\
+              "\"dnsServers\":[\"10.1.1.11\"], "\
+              "\"ipv4RangeStart\":\"10.1.1.50\", "\
+              "\"maxLeases\":15, "\
+              "\"leaseTime\":7200}", 
+              dhcp_callback, NULL, NULL, &lserror);
+      }
     }
+  }
+  else {
+    ifaceInfo.ip_state = REMOVED;
   }
 
   sysinfo_response();
@@ -578,6 +585,9 @@ bool iface_status_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
 
 void remove_iface(struct interface *iface) {
   struct interface *iter = ifaceInfo.ifaces;
+
+  if (!iface)
+    return;
 
   if (iter == iface) {
     ifaceInfo.ifaces = iface->next;
@@ -755,7 +765,7 @@ struct interface *request_interface(char *type, char *ifname, struct wifi_ap *ap
   struct interface *iter = NULL;
   char *payload = NULL;
 
-  if (ifname && get_iface(ifname, NULL)) {
+  if (ifname && get_iface(NULL, ifname)) {
     syslog(LOG_WARNING, "WARNING: Already requested interface %s, not setting up again\n", ifname);
     return NULL;
   }
@@ -817,6 +827,11 @@ bool btmon_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
 
   object = json_parse_document(LSMessageGetPayload(msg));
   json_get_bool(object, "returnValue", &returnValue);
+
+  // returnValue isn't passed in subsequent subcription messages, not sure how else to 
+  // distinguish non-existant from existant but false
+  if (!json_find_first_label(object, "returnValue"))
+    returnValue = true;
 
   if (returnValue) {
     char *radio;
@@ -891,6 +906,7 @@ bool bt_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
 
       pthread_mutex_lock(&iface->mutex);
       iface->link_state = link_state;
+      iface->ifname = strdup(ifname);
       pthread_mutex_unlock(&iface->mutex);
 
       if (link_state == UP && iface->bridge_state != BRIDGED)
