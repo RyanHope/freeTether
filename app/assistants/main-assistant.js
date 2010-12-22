@@ -58,6 +58,26 @@ MainAssistant.prototype.setup = function() {
  			disabled: false
 		}
 	);
+	
+	this.controller.setupWidget(
+    Mojo.Menu.appMenu,
+    {
+      omitDefaultItems: true
+    },
+    {
+      visible: true,
+      items: [
+        {
+          label: "Preferences",
+          command: 'do-prefs'
+        },
+        {
+          label: "Help",
+          command: 'do-help'
+        }
+      ]
+    }
+  );
 
 	this.controller.setupWidget(
 		Mojo.Menu.commandMenu,
@@ -160,6 +180,14 @@ MainAssistant.prototype.handleCommand = function(event) {
 				this.btOptions.style.display = 'none';
 				this.usbOptions.style.display = '';
 				break;
+				
+      case 'do-help':
+        this.controller.stageController.pushScene('help');
+        break;
+        
+      case 'do-prefs':
+        this.controller.stageController.pushScene('preferences');
+        break;
 		}
 			
 	}

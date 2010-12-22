@@ -14,3 +14,65 @@
 {
 	background: url(../images/wifi.png) center center no-repeat;
 }
+
+/*
+ * Help Scene Styles
+ */
+.help .palm-text-wrapper .palm-body-text#appdetails
+{
+  margin-bottom: 2px;
+}
+.help .palm-text-wrapper .palm-body-text.devs
+{
+  font-size: 14px;
+  margin-bottom: 6px;
+}
+.help .palm-text-wrapper .palm-body-text.copy
+{
+  margin-top: -8px;
+}
+.help .list_scene
+{
+  position:relative;
+  left:48px;
+  top:10px;
+  width:32px; 
+  height:32px;
+  vertical-align:bottom;
+  padding: 0px 0px 0px 5px;
+  float:left;
+}
+.help .img_web
+{
+  position:relative;
+  left:8px;
+  top:10px;
+  width:32px; 
+  height:32px;
+  background: url(../images/help/application-web.png) no-repeat  bottom;
+  padding: 0px 0px 0px 5px;
+  float:left;
+}
+.help .img_email
+{
+  position:relative;
+  left:8px;
+  top:10px;
+  width:32px; 
+  height:32px;
+  background: url(../images/help/application-email.png) no-repeat bottom;
+  vertical-align:bottom;
+  padding: 0px 0px 0px 5px;
+  float:left;
+}
+.help .img_changelog
+{
+  position:relative;
+  left:8px;
+  top:10px;
+  width:32px; 
+  height:32px;
+  background: url(../images/help/scene-changelog.png) no-repeat  bottom;
+  padding: 0px 0px 0px 5px;
+  float:left;
+}
