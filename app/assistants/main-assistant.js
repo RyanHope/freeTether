@@ -19,9 +19,8 @@ function MainAssistant() {
     {label:$L('USBNET + PASSTHRU'),       value:4},
     {label:$L('USBNET + UMS + NOVACOM'),  value:5},
   ];
-  /* If webOS 2.0
-  this.usbChoices.push({label:$L('PASSTHRU + NOVACOM'),value:6})
-  */
+  if (Mojo.Environment.DeviceInfo.platformVersionMajor == 2)
+    this.usbChoices.push({label:$L('PASSTHRU + NOVACOM'),value:6})
 	
 }
 
