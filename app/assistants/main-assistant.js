@@ -138,7 +138,7 @@ MainAssistant.prototype.updateOptions = function(payload) {
   var i = 0;
   while (payload.sysInfo.interfaces[i]) {
     var p = payload.sysInfo.interfaces[i++];
-    this.connections.innerHTML = this.wifiOptions.innerHTML + 
+    this.connections.innerHTML = this.connections.innerHTML + 
       "-- Interface " + i + " --<br>" + 
       "&nbsp&nbspifname: " + p.ifname + "<br>" + 
       "&nbsp&nbspiface state: " + p.stateInterface + "<br>" + 
