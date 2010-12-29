@@ -103,7 +103,7 @@ MainAssistant.prototype.setup = function() {
       },
       this.usbModel
     );
-    this.controller.listen('security', Mojo.Event.propertyChange, this.usbChangedHandler);
+    this.controller.listen('usbGadget', Mojo.Event.propertyChange, this.usbChangedHandler);
 	
 	this.controller.setupWidget(
 		'tetherWiFi',
@@ -199,6 +199,7 @@ MainAssistant.prototype.setup = function() {
 };
 
 MainAssistant.prototype.usbChanged = function(event) {
+  this.service.setUSB({'state':event.value});
 }
 
 MainAssistant.prototype.securityChanged = function(event) {
