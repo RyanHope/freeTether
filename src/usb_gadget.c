@@ -96,7 +96,7 @@ bool set_usb_gadget(LSHandle* lshandle, LSMessage *message, void *ctx) {
   json_get_int(object, "state", &state);
 
   int cur = get_usb_gadget_state();
-  if (cur==2) {
+  if (cur==2 || cur==6) {
     system("mount -o remount,rw /");
     system("stop novacomd");
     system("rm -f /var/gadget/novacom_enabled");
@@ -113,7 +113,7 @@ bool set_usb_gadget(LSHandle* lshandle, LSMessage *message, void *ctx) {
   char *tmp = 0;
   len = set_usb_gadget_state(state);
 
-  if (state==2) {
+  if (state==2 || state==6) {
     system("touch /var/gadget/novacom_enabled");
     system("start novacomd");
     system("mount -o remount,ro /");
