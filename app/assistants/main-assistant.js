@@ -303,6 +303,7 @@ MainAssistant.prototype.handleCommand = function(event) {
 				this.wifiOptions.style.display = 'none';
 				this.btOptions.style.display = 'none';
 				this.usbOptions.style.display = 'none';
+				this.controller.sceneScroller.mojo.revealTop()
 				break;
 				
      case 'connections':
@@ -311,6 +312,7 @@ MainAssistant.prototype.handleCommand = function(event) {
         this.wifiOptions.style.display = 'none';
         this.btOptions.style.display = 'none';
         this.usbOptions.style.display = 'none';
+        this.controller.sceneScroller.mojo.revealTop()
         break;
 				
 			case 'wifiOptions':
@@ -319,6 +321,7 @@ MainAssistant.prototype.handleCommand = function(event) {
 				this.wifiOptions.style.display = '';
 				this.btOptions.style.display = 'none';
 				this.usbOptions.style.display = 'none';
+				this.controller.sceneScroller.mojo.revealTop()
 				break;
 			
 			case 'btOptions':
@@ -327,6 +330,7 @@ MainAssistant.prototype.handleCommand = function(event) {
 				this.wifiOptions.style.display = 'none';
 				this.btOptions.style.display = '';
 				this.usbOptions.style.display = 'none';
+				this.controller.sceneScroller.mojo.revealTop()
 				break;
 				
 			case 'usbOptions':
@@ -335,6 +339,7 @@ MainAssistant.prototype.handleCommand = function(event) {
 				this.wifiOptions.style.display = 'none';
 				this.btOptions.style.display = 'none';
 				this.usbOptions.style.display = '';
+				this.controller.sceneScroller.mojo.revealTop()
 				break;
 				
       case 'do-help':
