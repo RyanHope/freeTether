@@ -7,22 +7,22 @@
 #include "luna_methods.h"
 #include "luna_service.h"
 
-#define IP_FORWARD "/proc/sys/net/ipv4/ip_forward"
+#define USB_GADGET "/sys/class/usb_gadget/config_num"
 #define BUF_SIZE (32*(sizeof(struct inotify_event)+16))
 
-int monitor_ip_forward;
+int monitor_usb_gadget;
 
-void ip_forward_cleanup() {
-  monitor_ip_forward = 0;
+void usb_gadget_cleanup() {
+  monitor_usb_gadget = 0;
 }
 
-int get_ip_forward_state() {
+int get_usb_gadget_state() {
   FILE *fp;
   int state = -1;
 
-  fp = fopen(IP_FORWARD, "r");
+  fp = fopen(USB_GADGET, "r");
   if (!fp) {
-    syslog(LOG_ERR, "Error opening %s for reading", IP_FORWARD);
+    syslog(LOG_ERR, "Error opening %s for reading", USB_GADGET);
     return -1;
   }
 
@@ -32,7 +32,7 @@ int get_ip_forward_state() {
   return state;
 }
 
-bool get_ip_forward(LSHandle* lshandle, LSMessage *message, void *ctx) {
+bool get_usb_gadget(LSHandle* lshandle, LSMessage *message, void *ctx) {
   LSError lserror;
   LSErrorInit(&lserror);
 
@@ -42,7 +42,7 @@ bool get_ip_forward(LSHandle* lshandle, LSMessage *message, void *ctx) {
   LSSubscriptionProcess(lshandle,message,&subscribed,&lserror);
 
   char *tmp = 0;
-  len = asprintf(&tmp, "{\"returnValue\":true,\"state\":%c}", (char)get_ip_forward_state());
+  len = asprintf(&tmp, "{\"returnValue\":true,\"state\":%d}", get_usb_gadget_state());
   if (tmp)
     LSMessageReply(lshandle,message,tmp,&lserror);
   else
@@ -56,22 +56,18 @@ bool get_ip_forward(LSHandle* lshandle, LSMessage *message, void *ctx) {
   return true;
 }
 
-int toggle_ip_forward_state() {
+int set_usb_gadget_state(int state) {
   FILE *fp;
   int ret = -1;
-  int state;
   int count = 0;
   int i;
 
-  fp = fopen(IP_FORWARD, "w+");
+  fp = fopen(USB_GADGET, "w+");
 
   if (!fp) {
-    syslog(LOG_ERR, "Cannot open %s for writing", IP_FORWARD);
+    syslog(LOG_ERR, "Cannot open %s for writing", USB_GADGET);
     return -1;
   }
-
-  fscanf(fp, "%d", &state);
-  state ^= 1;
 
   for (i=0; i<5; i++) {
     if (ret == 1)
@@ -85,14 +81,20 @@ int toggle_ip_forward_state() {
   return 0;
 }
 
-bool toggle_ip_forward(LSHandle* lshandle, LSMessage *message, void *ctx) {
+bool set_usb_gadget(LSHandle* lshandle, LSMessage *message, void *ctx) {
   LSError lserror;
   LSErrorInit(&lserror);
 
   int len = 0;
+  int state = 0;
+
+  json_t *object;
+  object = json_parse_document(LSMessageGetPayload(message));
+  json_get_int(object, "state", &state);
 
   char *tmp = 0;
-  len = asprintf(&tmp, "{\"returnValue\":true,\"state\":%c}", (char)toggle_ip_forward_state());
+  len = set_usb_gadget_state(state);
+  len = asprintf(&tmp, "{\"returnValue\":true,\"state\":%c}", len==1?state:-1);
   if (tmp)
     LSMessageReply(lshandle,message,tmp,&lserror);
   else
@@ -106,9 +108,7 @@ bool toggle_ip_forward(LSHandle* lshandle, LSMessage *message, void *ctx) {
   return true;
 }
 
-void *ipmon_thread(void *ptr) {
-  // TODO: seg faulting
-  return NULL;
+void *usbgadgetmon_thread(void *ptr) {
 
   LSError lserror;
   LSErrorInit(&lserror);
@@ -119,7 +119,7 @@ void *ipmon_thread(void *ptr) {
     return;
   }
 
-  int wd = inotify_add_watch(fd, IP_FORWARD, IN_CLOSE_WRITE);
+  int wd = inotify_add_watch(fd, USB_GADGET, IN_CLOSE_WRITE);
   if (wd<0) {
     syslog(LOG_ERR, "inotify_add_watch failed");
     return;
@@ -129,18 +129,18 @@ void *ipmon_thread(void *ptr) {
   int len = 0, state = 0;
   FILE *fp;
 
-  monitor_ip_forward = 1;
-  while (monitor_ip_forward) {
+  monitor_usb_gadget = 1;
+  while (monitor_usb_gadget) {
     len = read (fd, buf, BUF_SIZE);
     if (len > 0) {
-      fp = fopen(IP_FORWARD, "r");
+      fp = fopen(USB_GADGET, "r");
       if (fp) {
         fscanf(fp, "%d", &state);
         fclose(fp);
         syslog(LOG_DEBUG, "monitor thread state %d", state);
         len = asprintf(&tmp, "{\"state\":%d}", state);
         if (tmp) {
-          LSSubscriptionRespond(serviceHandle,"/get_ip_forward",tmp, &lserror);
+          LSSubscriptionRespond(serviceHandle,"/get_usb_gadget",tmp, &lserror);
           free(tmp);
         }
       }

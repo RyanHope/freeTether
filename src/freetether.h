@@ -82,5 +82,6 @@ extern struct iface_info ifaceInfo;
 int setupTmpDir();
 void ip_forward_cleanup();
 void *ipmon_thread(void *ptr);
+void *usbgadgetmon_thread(void *ptr);
 
 #endif

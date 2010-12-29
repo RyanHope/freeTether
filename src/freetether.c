@@ -98,6 +98,7 @@ int is_mounted(const char* dest) {
 int main(int argc, char **argv) {
 
   pthread_t ipmon_tid;
+  pthread_t usbgadgetmon_tid;
 
   signal(SIGINT, sighandler);
   signal(SIGTERM, sighandler);
@@ -119,6 +120,7 @@ int main(int argc, char **argv) {
 
   if (!sys_info_init() && luna_service_initialize(APP_ID)) {
     pthread_create(&ipmon_tid, NULL, ipmon_thread, NULL);
+    pthread_create(&usbgadgetmon_tid, NULL, usbgadgetmon_thread, NULL);
     luna_service_start();
   }
 

@@ -1043,6 +1043,8 @@ bool version(LSHandle *sh, LSMessage *msg, void *ctx) {
 }
 
 LSMethod luna_methods[] = {
+  {"get_usb_gadget", get_usb_gadget},
+  {"set_usb_gadget", set_usb_gadget},
   {"get_ip_forward", get_ip_forward},
   {"toggle_ip_forward", toggle_ip_forward},
   {"version", version},
