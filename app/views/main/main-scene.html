@@ -35,15 +35,24 @@
       <div class="palm-group-title">Network Info</div>
       <div class="palm-list">
         <div class="palm-row first">
-          <div class="palm-row-wrapper">
-             <div class="label">Network Name</div>
-             <div id="network" x-mojo-element="TextField"></div>
+          <div class="palm-row-wrapper textfield-group" x-mojo-focus-highlight="true">
+            <div class="title">
+              <div class="label">Network</div>
+              <div id="network" x-mojo-element="TextField"></div>
+            </div>
           </div>
         </div>
-        <div class="palm-row last">
+        <div id="security-row" class="palm-row">
           <div class="palm-row-wrapper">
-            <div class="label">Passphrase</div>
-            <div id="passphrase" x-mojo-element="PasswordField"></div>
+            <div id="security" x-mojo-element="ListSelector"></div>
+          </div>
+        </div>
+        <div id="passphrase-row" class="palm-row last">
+          <div class="palm-row-wrapper textfield-group" x-mojo-focus-highlight="true">
+            <div class="title">
+              <div class="label">Passphrase</div>
+              <div id="passphrase" x-mojo-element="PasswordField"></div>
+            </div>
           </div>
         </div>
       </div>

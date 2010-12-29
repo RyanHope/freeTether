@@ -13,9 +13,12 @@ preferenceCookie.prototype.get = function(reload)
 			// setup our default preferences
 			this.prefs = 
 			{
-				tetherWiFi:		false,
-				tetherBT:		false,
-				tetherUSB:		false
+				tetherWiFi:   false,
+		    tetherBT:     false,
+				tetherUSB:		false,
+				network:      'freeTether',
+				passphrase:   '',
+				security:     'open'
 				
 			};
 			

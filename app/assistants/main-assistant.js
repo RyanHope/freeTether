@@ -4,6 +4,12 @@ function MainAssistant() {
   this.service = new FreeTetherService();
 	this.prefs = this.cookie.get();
   this.statusSubscription = null;
+  
+  this.securityModel =
+  {
+    value: this.prefs.security,
+    choices: []
+  };
 	
 }
 
@@ -21,6 +27,58 @@ MainAssistant.prototype.setup = function() {
 	this.btOptions.style.display		= 'none';
 	this.usbOptions						= this.controller.get('usbOptions');
 	this.usbOptions.style.display		= 'none';
+	
+	this.network              = this.controller.get('network');
+	this.passphrase           = this.controller.get('passphrase');
+	this.security             = this.controller.get('security');
+	
+	this.securityRow         = this.controller.get('security-row');
+	this.passphraseRow       = this.controller.get('passphrase-row');
+	
+	this.securityChangedHandler  = this.securityChanged.bindAsEventListener(this);
+	this.textChanged             = this.textChanged.bindAsEventListener(this);
+	
+  this.controller.setupWidget(
+    'network',
+    {
+      multiline: false,
+      enterSubmits: false,
+      hintText: 'Required',
+      modelProperty: 'network',
+      textCase: Mojo.Widget.steModeLowerCase,
+      focusMode: Mojo.Widget.focusSelectMode
+    },
+    this.prefs
+  );
+  Mojo.Event.listen(this.network,      Mojo.Event.propertyChange,  this.textChanged);
+  
+  this.controller.setupWidget(
+    'security',
+    {
+      label: 'Security',
+      choices:
+        [
+          {label:'Open', value:'open'},
+          {label:'WPA/WPA2 Personal', value:'wpa'},
+        ],
+        modelProperty: 'security'
+      },
+      this.prefs
+    );
+    this.controller.listen('security', Mojo.Event.propertyChange, this.securityChangedHandler);
+  
+  this.controller.setupWidget(
+    'passphrase',
+    {
+      multiline: false,
+      enterSubmits: false,
+      modelProperty: 'passphrase',
+      textCase: Mojo.Widget.steModeLowerCase,
+      focusMode: Mojo.Widget.focusSelectMode
+    },
+    this.prefs
+  );
+  Mojo.Event.listen(this.passphrase,      Mojo.Event.propertyChange,  this.textChanged);
 	
 	this.controller.setupWidget(
 		'tetherWiFi',
@@ -113,6 +171,21 @@ MainAssistant.prototype.setup = function() {
   this.service.monitorServer("org.webosinternals.freetether", this.server.bind(this));
   this.sysInfoSubscription = this.service.getStatus({subscribe: true}, this.updateOptions.bind(this));
 };
+
+MainAssistant.prototype.securityChanged = function(event) {
+  this.cookie.put(this.prefs);
+  if (this.prefs.security == 'open') {
+    this.passphraseRow.style.display = 'none';
+    this.securityRow.className = 'palm-row last';
+  } else {
+    this.passphraseRow.style.display = '';
+    this.securityRow.className = 'palm-row';
+  }
+}
+
+MainAssistant.prototype.textChanged = function(event) {
+  this.cookie.put(this.prefs);
+}
 
 MainAssistant.prototype.server = function(payload) {
         for (p in payload) {
