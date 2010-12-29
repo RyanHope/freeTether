@@ -14,6 +14,10 @@
 {
 	background: url(../images/wifi.png) center center no-repeat;
 }
+.icon-connections
+{
+  background: url(../images/connections.png) center center no-repeat;
+}
 
 /*
  * Help Scene Styles
