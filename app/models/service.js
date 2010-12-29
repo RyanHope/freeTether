@@ -48,5 +48,16 @@ var FreeTetherService = Class.create({
       onFailure: callback
     });
   },
+  
+  getUSB: function(param, callback) {
+    var request = new Mojo.Service.Request(ServiceUri, {
+      method: 'get_usb_gadget',
+      parameters: param,
+      onSuccess: callback,
+      onFailure: callback
+    });
+
+    return request;
+  },
 
 });

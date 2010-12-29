@@ -138,7 +138,7 @@ void *usbgadgetmon_thread(void *ptr) {
         fscanf(fp, "%d", &state);
         fclose(fp);
         syslog(LOG_DEBUG, "monitor thread state %d", state);
-        len = asprintf(&tmp, "{\"state\":%d}", state);
+        len = asprintf(&tmp, "{\"returnValue\":true,\"state\":%d}", state);
         if (tmp) {
           LSSubscriptionRespond(serviceHandle,"/get_usb_gadget",tmp, &lserror);
           free(tmp);

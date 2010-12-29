@@ -10,6 +10,18 @@ function MainAssistant() {
     value: this.prefs.security,
     choices: []
   };
+  
+  this.usbModel = {currentUSB: 0};
+  this.usbChoices = [
+    {label:$L('UMS'),                     value:1},
+    {label:$L('UMS + NOVACOM'),           value:2},
+    {label:$L('PASSTHRU'),                value:3},
+    {label:$L('USBNET + PASSTHRU'),       value:4},
+    {label:$L('USBNET + UMS + NOVACOM'),  value:5},
+  ];
+  /* If webOS 2.0
+  this.usbChoices.push({label:$L('PASSTHRU + NOVACOM'),value:6})
+  */
 	
 }
 
@@ -35,7 +47,10 @@ MainAssistant.prototype.setup = function() {
 	this.securityRow         = this.controller.get('security-row');
 	this.passphraseRow       = this.controller.get('passphrase-row');
 	
+	this.usbGadget           = this.controller.get('usbGadget');
+	
 	this.securityChangedHandler  = this.securityChanged.bindAsEventListener(this);
+	this.usbChangedHandler       = this.usbChanged.bindAsEventListener(this);
 	this.textChanged             = this.textChanged.bindAsEventListener(this);
 	
   this.controller.setupWidget(
@@ -79,6 +94,17 @@ MainAssistant.prototype.setup = function() {
     this.prefs
   );
   Mojo.Event.listen(this.passphrase,      Mojo.Event.propertyChange,  this.textChanged);
+  
+  this.controller.setupWidget(
+    'usbGadget',
+    {
+      label: '',
+      choices: this.usbChoices,
+      modelProperty: 'currentUSB',
+      },
+      this.usbModel
+    );
+    this.controller.listen('security', Mojo.Event.propertyChange, this.usbChangedHandler);
 	
 	this.controller.setupWidget(
 		'tetherWiFi',
@@ -170,7 +196,11 @@ MainAssistant.prototype.setup = function() {
 	 
   this.service.monitorServer("org.webosinternals.freetether", this.server.bind(this));
   this.sysInfoSubscription = this.service.getStatus({subscribe: true}, this.updateOptions.bind(this));
+  this.getUSBSubscription = this.service.getUSB({subscribe: true}, this.updateUSB.bind(this));
 };
+
+MainAssistant.prototype.usbChanged = function(event) {
+}
 
 MainAssistant.prototype.securityChanged = function(event) {
   this.cookie.put(this.prefs);
@@ -191,6 +221,13 @@ MainAssistant.prototype.server = function(payload) {
         for (p in payload) {
           Mojo.Log.error(p + " : " + payload[p]);
         }
+}
+
+MainAssistant.prototype.updateUSB = function(payload) {
+  if (payload.returnValue) {
+    this.usbModel.currentUSB = payload.state;
+    this.controller.modelChanged(this.usbModel, this);
+  }
 }
 
 MainAssistant.prototype.updateOptions = function(payload) {
