@@ -1,4 +1,5 @@
 //var ServiceUri = "palm://com.palm.mobilehotspot";
+var SysServiceUri = "palm://com.palm.systemservice";
 var ServiceUri = "palm://org.webosinternals.freetether";
 var FreeTetherService = Class.create({
   initialize: function() {
@@ -63,6 +64,17 @@ var FreeTetherService = Class.create({
   setUSB: function(param, callback) {
     var request = new Mojo.Service.Request(ServiceUri, {
       method: 'set_usb_gadget',
+      parameters: param,
+      onSuccess: callback,
+      onFailure: callback
+    });
+
+    return request;
+  },
+
+  getPrefs: function(param, callback) {
+    var request = new Mojo.Service.Request(SysServiceUri, {
+      method: 'getPreferences',
       parameters: param,
       onSuccess: callback,
       onFailure: callback

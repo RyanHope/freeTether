@@ -21,6 +21,8 @@ function MainAssistant() {
   ];
   if (Mojo.Environment.DeviceInfo.platformVersionMajor == 2)
     this.usbChoices.push({label:$L('PASSTHRU + NOVACOM'),value:6})
+    
+  this.panModel = {pan: false};
 	
 }
 
@@ -47,6 +49,7 @@ MainAssistant.prototype.setup = function() {
 	this.passphraseRow       = this.controller.get('passphrase-row');
 	
 	this.usbGadget           = this.controller.get('usbGadget');
+  this.panProfile          = this.controller.get('panProfile');
 	
 	this.securityChangedHandler  = this.securityChanged.bindAsEventListener(this);
 	this.usbChangedHandler       = this.usbChanged.bindAsEventListener(this);
@@ -104,6 +107,16 @@ MainAssistant.prototype.setup = function() {
       this.usbModel
     );
     this.controller.listen('usbGadget', Mojo.Event.propertyChange, this.usbChangedHandler);
+    
+  this.controller.setupWidget(
+    'panProfile',
+    {
+       trueLabel:  'Enabled',
+       falseLabel: 'Disabled',
+       modelProperty:  'pan'
+    },
+    this.panModel
+  );
 	
 	this.controller.setupWidget(
 		'tetherWiFi',
@@ -196,6 +209,7 @@ MainAssistant.prototype.setup = function() {
   this.service.monitorServer("org.webosinternals.freetether", this.server.bind(this));
   this.sysInfoSubscription = this.service.getStatus({subscribe: true}, this.updateOptions.bind(this));
   this.getUSBSubscription = this.service.getUSB({subscribe: true}, this.updateUSB.bind(this));
+  this.btProfileSubscription = this.service.getPrefs({keys:['btprofiledisable'], subscribe: true}, this.updateBTProfile.bind(this));
 };
 
 MainAssistant.prototype.usbChanged = function(event) {
@@ -221,6 +235,23 @@ MainAssistant.prototype.server = function(payload) {
         for (p in payload) {
           Mojo.Log.error(p + " : " + payload[p]);
         }
+}
+
+MainAssistant.prototype.updateBTProfile = function(payload) {
+  this.panModel.pan = true;
+  if (payload.returnValue) {
+    Mojo.Log.error(payload.btprofiledisable)
+    if (payload.btprofiledisable instanceof Array) {
+      for(var i = 0; i < payload.btprofiledisable.length; i++) {
+        if (payload.btprofiledisable[i] == 'PAN')
+          this.panModel.pan = false;       
+      }
+    } else {
+      if (payload.btprofiledisable == 'PAN')
+        this.panModel.pan = false;
+    }
+    this.controller.modelChanged(this.panModel, this);
+  }
 }
 
 MainAssistant.prototype.updateUSB = function(payload) {
