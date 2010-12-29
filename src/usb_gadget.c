@@ -82,6 +82,9 @@ int set_usb_gadget_state(int state) {
 }
 
 bool set_usb_gadget(LSHandle* lshandle, LSMessage *message, void *ctx) {
+
+  // TODO: Less system() calls
+
   LSError lserror;
   LSErrorInit(&lserror);
 
@@ -92,9 +95,39 @@ bool set_usb_gadget(LSHandle* lshandle, LSMessage *message, void *ctx) {
   object = json_parse_document(LSMessageGetPayload(message));
   json_get_int(object, "state", &state);
 
+  int cur = get_usb_gadget_state();
+  if (cur==2) {
+    system("mount -o remount,rw /");
+    system("stop novacomd");
+    system("rm -f /var/gadget/novacom_enabled");
+  } else if (cur==4) {
+    system("mount -o remount,rw /");
+    system("rm -f /var/gadget/usbnet_enabled");
+  } else if (cur==5) {
+    system("mount -o remount,rw /");
+    system("stop novacomd");
+    system("rm -f /var/gadget/novacom_enabled");
+    system("rm -f /var/gadget/usbnet_enabled");
+  }
+
   char *tmp = 0;
   len = set_usb_gadget_state(state);
-  len = asprintf(&tmp, "{\"returnValue\":true,\"state\":%c}", len==1?state:-1);
+
+  if (state==2) {
+    system("touch /var/gadget/novacom_enabled");
+    system("start novacomd");
+    system("mount -o remount,ro /");
+  } else if (state==4) {
+    system("touch /var/gadget/usbnet_enabled");
+    system("mount -o remount,ro /");
+  } else if (state==5) {
+    system("touch /var/gadget/novacom_enabled");
+    system("touch /var/gadget/usbnet_enabled");
+    system("start novacomd");
+    system("mount -o remount,ro /");
+  }
+
+  len = asprintf(&tmp, "{\"returnValue\":true,\"state\":%c}", state);
   if (tmp)
     LSMessageReply(lshandle,message,tmp,&lserror);
   else
