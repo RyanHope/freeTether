@@ -33,16 +33,14 @@ MainAssistant.prototype.setup = function() {
 
 	this.controller.document.body.className = 'palm-dark';
 
-	this.mainOptions					= this.controller.get('mainOptions');
-	this.mainOptions.style.display		= '';
-	this.connections          = this.controller.get('connections');
-  this.connections.style.display    = 'none';
-	this.wifiOptions					= this.controller.get('wifiOptions');
-	this.wifiOptions.style.display		= 'none';
-	this.btOptions						= this.controller.get('btOptions');
-	this.btOptions.style.display		= 'none';
-	this.usbOptions						= this.controller.get('usbOptions');
-	this.usbOptions.style.display		= 'none';
+	this.toggles = this.controller.get('toggles');
+	this.toggles.style.display = '';
+	
+	this.connections = this.controller.get('connections');
+  this.connections.style.display = 'none';
+  
+	this.options = this.controller.get('options');
+	this.options.style.display = 'none';
 	
 	this.network              = this.controller.get('network');
 	this.passphrase           = this.controller.get('passphrase');
@@ -160,10 +158,6 @@ MainAssistant.prototype.setup = function() {
       visible: true,
       items: [
         {
-          label: "Preferences",
-          command: 'do-prefs'
-        },
-        {
           label: "Help",
           command: 'do-help'
         }
@@ -181,13 +175,11 @@ MainAssistant.prototype.setup = function() {
 			items: [
 				{},
 				{label:$L('Views'), 
-				toggleCmd:'mainOptions',
+				toggleCmd:'toggles',
 				items:[
-					{label:$L('Main'), icon:'icon-switch', command:'mainOptions'},
+					{label:$L('Toggles'), icon:'icon-switch', command:'toggles'},
 					{label:$L('Connections'), icon:'icon-connections', command:'connections'}, 
-					{label:$L('WiFi'), icon:'icon-wifi', command:'wifiOptions'},
-					{label:$L('BT'),  icon:'icon-bt', command:'btOptions'},
-					{label:$L('USB'), icon:'icon-usb', command:'usbOptions'}
+					{label:$L('Options'), icon:'icon-prefs', command:'options'}
 				]},
 				{},
 			]
@@ -291,58 +283,31 @@ MainAssistant.prototype.handleCommand = function(event) {
 		
 		switch (event.command)
 		{
-			case 'mainOptions':
-				this.mainOptions.style.display = '';
+			case 'toggles':
+				this.toggles.style.display = '';
 				this.connections.style.display = 'none';
-				this.wifiOptions.style.display = 'none';
-				this.btOptions.style.display = 'none';
-				this.usbOptions.style.display = 'none';
+				this.options.style.display = 'none';
 				this.controller.sceneScroller.mojo.revealTop()
 				break;
 				
      case 'connections':
-        this.mainOptions.style.display = 'none';
+        this.toggles.style.display = 'none';
         this.connections.style.display = '';
-        this.wifiOptions.style.display = 'none';
-        this.btOptions.style.display = 'none';
-        this.usbOptions.style.display = 'none';
+        this.options.style.display = 'none';
         this.controller.sceneScroller.mojo.revealTop()
         break;
 				
-			case 'wifiOptions':
-				this.mainOptions.style.display = 'none';
+			case 'options':
+				this.toggles.style.display = 'none';
 				this.connections.style.display = 'none';
-				this.wifiOptions.style.display = '';
-				this.btOptions.style.display = 'none';
-				this.usbOptions.style.display = 'none';
-				this.controller.sceneScroller.mojo.revealTop()
-				break;
-			
-			case 'btOptions':
-				this.mainOptions.style.display = 'none';
-				this.connections.style.display = 'none';
-				this.wifiOptions.style.display = 'none';
-				this.btOptions.style.display = '';
-				this.usbOptions.style.display = 'none';
-				this.controller.sceneScroller.mojo.revealTop()
-				break;
-				
-			case 'usbOptions':
-				this.mainOptions.style.display = 'none';
-				this.connections.style.display = 'none';
-				this.wifiOptions.style.display = 'none';
-				this.btOptions.style.display = 'none';
-				this.usbOptions.style.display = '';
+				this.options.style.display = '';
 				this.controller.sceneScroller.mojo.revealTop()
 				break;
 				
       case 'do-help':
         this.controller.stageController.pushScene('help');
         break;
-        
-      case 'do-prefs':
-        this.controller.stageController.pushScene('preferences');
-        break;
+
 		}
 			
 	}

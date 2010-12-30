@@ -2,7 +2,7 @@
 	<div class="palm-header" id="main-hdr">
 		freeTether
 	</div>
-	<div id="mainOptions">
+	<div id="toggles">
 		<div class="palm-group">
 			<div class="palm-group-title">Tethered Interfaces</div>
 			<div class="palm-list">
@@ -30,9 +30,9 @@
   <div id="connections">
     Connected Devices
   </div>
-	<div id="wifiOptions">
-		<div class="palm-group">
-      <div class="palm-group-title">Network Info</div>
+	<div id="options">
+	  <div class="palm-group">
+      <div class="palm-group-title">Wifi Prefs</div>
       <div class="palm-list">
         <div class="palm-row first">
           <div class="palm-row-wrapper textfield-group" x-mojo-focus-highlight="true">
@@ -57,27 +57,23 @@
         </div>
       </div>
     </div>
-	</div>
-	<div id="btOptions">
-		<div class="palm-group">
-      <div class="palm-group-title">Bluetooth Profile</div>
+    <div class="palm-group">
+      <div class="palm-group-title">USB Prefs</div>
+      <div class="palm-list">
+        <div class="palm-row single">
+          <div class="palm-row-wrapper">
+            <div id="usbGadget" x-mojo-element="ListSelector"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="palm-group">
+      <div class="palm-group-title">Bluetooth Prefs</div>
       <div class="palm-list">
         <div class="palm-row single">    
           <div class="palm-row-wrapper">
             <div class="label left">PAN</div>
             <div id="panProfile" x-mojo-element="ToggleButton"></div>     
-          </div>
-        </div>
-      </div>
-    </div>
-	</div>
-	<div id="usbOptions">
-    <div class="palm-group">
-      <div class="palm-group-title">USB Gadget</div>
-      <div class="palm-list">
-        <div class="palm-row single">
-          <div class="palm-row-wrapper">
-            <div id="usbGadget" x-mojo-element="ListSelector"></div>
           </div>
         </div>
       </div>
