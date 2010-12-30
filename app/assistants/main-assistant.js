@@ -11,7 +11,6 @@ function MainAssistant() {
     choices: []
   };
   
-  this.usbModel = {currentUSB: 0};
   this.usbChoices = [
     {label:$L('UMS'),                     value:1},
     {label:$L('UMS + NOVACOM'),           value:2},
@@ -21,8 +20,12 @@ function MainAssistant() {
   ];
   if (Mojo.Environment.DeviceInfo.platformVersionMajor == 2)
     this.usbChoices.push({label:$L('PASSTHRU + NOVACOM'),value:6})
-    
-  this.panModel = {pan: false};
+  
+  this.usbModel = {value: 0};  
+  this.panModel = {value: false};
+  this.wifiToggle = {value: false};
+  this.btToggle = {value: false};
+  this.usbToggle = {value: false};
 	
 }
 
@@ -102,7 +105,7 @@ MainAssistant.prototype.setup = function() {
     {
       label: '',
       choices: this.usbChoices,
-      modelProperty: 'currentUSB',
+      modelProperty: 'value',
       },
       this.usbModel
     );
@@ -113,7 +116,7 @@ MainAssistant.prototype.setup = function() {
     {
        trueLabel:  'Enabled',
        falseLabel: 'Disabled',
-       modelProperty:  'pan'
+       modelProperty:  'value'
     },
     this.panModel
   );
@@ -123,12 +126,9 @@ MainAssistant.prototype.setup = function() {
 		{
   			trueLabel:  'On',
  			falseLabel: 'Off',
-  			fieldName:  'tetherWiFi'
+  			fieldName:  'value'
 		},
-		{
-			value : this.prefs.tetherWiFi,
- 			disabled: false
-		}
+		this.wifiToggle
 	);
 
 	this.controller.setupWidget(
@@ -136,12 +136,9 @@ MainAssistant.prototype.setup = function() {
 		{
   			trueLabel:  'On',
  			falseLabel: 'Off',
-  			fieldName:  'tetherBT'
+  			fieldName:  'value'
 		},
-		{
-			value : this.prefs.tetherBT,
- 			disabled: false
-		}
+		this.btToggle
 	);
 	
 	this.controller.setupWidget(
@@ -149,12 +146,9 @@ MainAssistant.prototype.setup = function() {
 		{
   			trueLabel:  'On',
  			falseLabel: 'Off',
-  			fieldName:  'tetherUSB'
+  			fieldName:  'value'
 		},
-		{
-			value : this.prefs.tetherUSB,
- 			disabled: false
-		}
+		this.usbToggle
 	);
 	
 	this.controller.setupWidget(
@@ -256,7 +250,7 @@ MainAssistant.prototype.updateBTProfile = function(payload) {
 
 MainAssistant.prototype.updateUSB = function(payload) {
   if (payload.returnValue) {
-    this.usbModel.currentUSB = payload.state;
+    this.usbModel.value = payload.state;
     this.controller.modelChanged(this.usbModel, this);
   }
 }
