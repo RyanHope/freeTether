@@ -4,15 +4,27 @@
 }
 .icon-usb
 {
-	background: url(../images/usb.png) left center no-repeat;
+  height: 32px;
+  width: 32px;
+  margin-left: 8px;
+  padding-top: 20px;
+	background: url(../images/usb.png) center center no-repeat;
 }
 .icon-bt
 {
-	background: url(../images/bt.png) left center no-repeat;
+  height: 32px;
+  width: 32px;
+  margin-left: 8px;
+  padding-top: 20px;
+	background: url(../images/bt.png) center center no-repeat;
 }
 .icon-wifi
 {
-	background: url(../images/wifi.png) left center no-repeat;
+  height: 32px;
+  width: 32px;
+  margin-left: 8px;
+  padding-top: 20px;
+	background: url(../images/wifi.png) center center no-repeat;
 }
 .icon-connections
 {
@@ -22,10 +34,9 @@
 {
   background: url(../images/prefs.png) center center no-repeat;
 }
-
 .toggles .palm-row-wrapper .label.left
 {
-  padding-left: 48px;
+  padding-left: 40px;
 }
 
 /*
