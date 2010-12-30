@@ -4,15 +4,15 @@
 }
 .icon-usb
 {
-	background: url(../images/usb.png) center center no-repeat;
+	background: url(../images/usb.png) left center no-repeat;
 }
 .icon-bt
 {
-	background: url(../images/bt.png) center center no-repeat;
+	background: url(../images/bt.png) left center no-repeat;
 }
 .icon-wifi
 {
-	background: url(../images/wifi.png) center center no-repeat;
+	background: url(../images/wifi.png) left center no-repeat;
 }
 .icon-connections
 {
@@ -21,6 +21,11 @@
 .icon-prefs
 {
   background: url(../images/prefs.png) center center no-repeat;
+}
+
+.toggles .palm-row-wrapper .label.left
+{
+  padding-left: 48px;
 }
 
 /*
