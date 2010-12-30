@@ -1,3 +1,11 @@
+GUI TODOs
+=========
+1. Fix icons on toggle page
+2. Add fade to bottom
+3. Improve snap to top behavior
+
+
+========================
 * Separate linked list to generic lists in own .c file (along with separating other things like sysinfo helpers).
 * Fix/Verify the subscriptions.
   NOTE I do not think dhcp lease information subscription really works, well the subscription might just die when the lease ends / client disconnects.
@@ -6,7 +14,6 @@
 * Check into libnetbridge (currently returning funky values)
 * Make sure ip forwarding is solid (does work for USB too or will need to bring back mount trick?)
 * Fix remove interface to go through list of interfaces, don't just shutdown everything.
-* MOJO MOJO MOJO
 * dash/notifications
 * WebOS 2.0 - exhibition, just type, activity etc...
 * Fix the cleaning up and disconnecting states
