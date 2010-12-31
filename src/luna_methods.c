@@ -764,6 +764,8 @@ void add_bridge(struct interface *iface) {
         "\"networkUsage\": [\"private\"], " \
         "\"networkTechnology\": \"unknown\", " \
         "\"networkScope\": \"lan\", " \
+        "\"ifPriority\": 170, " \
+        "\"doBringUpIf\": true, " \
         "\"ipv4\": " \
         "{ " \
             "\"ip\": \"0x0b01010a\", " \

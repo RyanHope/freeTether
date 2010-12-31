@@ -1,0 +1,14 @@
+{
+  "role": {
+     "exeName":"/var/usr/sbin/org.webosinternals.freetether",
+     "type": "regular",
+     "allowedNames": ["org.webosinternals.freetether"]
+  },
+  "permissions": [
+    {
+      "service":"org.webosinternals.freetether",
+      "inbound":["*"],
+      "outbound":["*"]
+    }
+  ]
+}

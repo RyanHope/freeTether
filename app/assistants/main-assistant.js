@@ -285,12 +285,12 @@ MainAssistant.prototype.addNewClients = function(clients) {
     }
 
     if (!found) {
-      newClient.type = client.type;
+      newClient.type = client.type || "usb";
       newClient.name = client.hostname || client.mac;
       newClient.mac = client.mac;
       newClient.ip = client.ipv4;
       Mojo.Log.error("add new client " + newClient.name);
-      if (this.clientListModel.items[0].empty)
+      if (this.clientListModel.items.length && this.clientListModel.items[0].empty)
         this.clientListModel.items.clear();
       this.clientListModel.items.push(newClient);
     }
