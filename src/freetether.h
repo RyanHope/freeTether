@@ -41,6 +41,7 @@ struct client {
   char *ipv4;
   char *leaseTimeString;
   char *leaseExpiryString;
+  struct interface *iface;
   struct client *next;
 };
 
@@ -57,7 +58,6 @@ struct interface {
   LINK_STATE link_state;
   struct wifi_ap *ap;
   char *type;
-  struct client *clients;
   pthread_mutex_t mutex;
   struct interface *next;
 };
@@ -75,9 +75,8 @@ struct iface_info {
   IP_STATE ip_state;
   DHCP_STATE dhcp_state;
   struct interface *ifaces;
+  struct client *connections;
   int num_ifaces;
-  struct client *pending_leases;
-  pthread_cond_t state_change;
   pthread_mutex_t mutex;
 };
 

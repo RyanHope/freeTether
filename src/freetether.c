@@ -19,7 +19,6 @@ struct iface_info ifaceInfo;
 static int sys_info_init() {
   memset(&ifaceInfo, 0, sizeof(ifaceInfo));
   pthread_mutex_init(&ifaceInfo.mutex, NULL); 
-  pthread_cond_init (&ifaceInfo.state_change, NULL);
 
   ifaceInfo.bridge = malloc(strlen(DEFAULT_BRIDGE) + 1);
   strcpy(ifaceInfo.bridge, DEFAULT_BRIDGE);
@@ -97,6 +96,7 @@ int is_mounted(const char* dest) {
 
 int main(int argc, char **argv) {
 
+  syslog(LOG_DEBUG, "FREETETHER SERVICE START");
   pthread_t ipmon_tid;
   pthread_t usbgadgetmon_tid;
 

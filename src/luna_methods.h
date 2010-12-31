@@ -40,4 +40,9 @@ do { \
     } \
   } while (0)
 
+#define FREE(p) \
+  do { \
+    if (p) free(p); \
+  } while (0)
+
 #endif /* LUNA_METHODS_H */

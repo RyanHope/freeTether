@@ -184,32 +184,31 @@ static char *generate_clientlist_json() {
 
   asprintf(&payload, "\"clients\": [");
 
-  for (iface = ifaceInfo.ifaces; iface; iface = iface->next) {
-    pthread_mutex_lock(&iface->mutex);
-    for (client = iface->clients; client; client = client->next) {
-      syslog(LOG_DEBUG, "client mac %s\n", client->mac);
-      sleep(1);
+  for (client = ifaceInfo.connections; client; client = client->next) {
+    syslog(LOG_DEBUG, "client mac %s\n", client->mac);
+    sleep(1);
 
-      if (!first)
-        asprintf(&payload, "%s, ", payload);
-      else
-        first = false;
+    if (!first)
+      asprintf(&payload, "%s, ", payload);
+    else
+      first = false;
 
-      asprintf(&payload, "%s { "\
-          "\"ifname\": \"%s\", "\
-          "\"type\": \"%s\", "\
-          "\"mac\": \"%s\", "\
-          "\"ipv4\": \"%s\", "\
-          "\"leaseTime\": \"%s\", "\
-          "\"leaseExpiry\": \"%s\"", 
-          payload, iface->ifname, iface->type, client->mac, client->ipv4, client->leaseTimeString, client->leaseExpiryString);
+    asprintf(&payload, "%s { "\
+        "\"ifname\": \"%s\", "\
+        "\"type\": \"%s\", "\
+        "\"mac\": \"%s\", "\
+        "\"ipv4\": \"%s\", "\
+        "\"leaseTime\": \"%s\", "\
+        "\"leaseExpiry\": \"%s\"", 
+        payload, 
+        (client->iface && client->iface->ifname) ? client->iface->ifname : "",
+        (client->iface && client->iface->type) ? client->iface->type : "",
+        client->mac, client->ipv4, client->leaseTimeString, client->leaseExpiryString);
 
-      if (client->hostname)
-        asprintf(&payload, "%s, \"hostname\": \"%s\"}", payload, client->hostname);
-      else
-        asprintf(&payload, "%s }", payload);
-    }
-    pthread_mutex_unlock(&iface->mutex);
+    if (client->hostname)
+      asprintf(&payload, "%s, \"hostname\": \"%s\"}", payload, client->hostname);
+    else
+      asprintf(&payload, "%s }", payload);
   }
 
   asprintf(&payload, "%s ]", payload);
@@ -233,8 +232,6 @@ static void clientlist_response() {
 
 static void free_iface(struct interface *iface) {
   if (iface) {
-    struct client *client = iface->clients;
-    struct client *prev = iface->clients;
     if (iface->ifname)
       free(iface->ifname);
     if (iface->type)
@@ -246,17 +243,6 @@ static void free_iface(struct interface *iface) {
         free(iface->ap->security);
       if (iface->ap->passphrase)
         free(iface->ap->passphrase);
-    }
-    
-    while (client) {
-      if (client->mac)
-        free(client->mac);
-      if (client->hostname)
-        free(client->hostname);
-
-      prev = client;
-      client = client->next;
-      free(prev);
     }
 
     free(iface);
@@ -331,185 +317,86 @@ char *strlower(char *str) {
   return str;
 }
 
-void update_pending_leases(struct client *client) {
-  struct client *pending_lease;
-  struct client *prev;
-  bool found = false;
-  
-  syslog(LOG_DEBUG, "update pending leases %p", client);
-  syslog(LOG_DEBUG, "pending %p", ifaceInfo.pending_leases);
-
-  if (!client)
-    return;
-
-  for (pending_lease = prev = ifaceInfo.pending_leases; pending_lease; prev = pending_lease, pending_lease = pending_lease->next) {
-    syslog(LOG_DEBUG, "check for %s vs %s", pending_lease->mac, client->mac);
-    if (pending_lease->mac && !strcmp(client->mac, pending_lease->mac)) {
-      found = true;
-      if (pending_lease->hostname) {
-        if (client->hostname)
-          free(client->hostname);
-        client->hostname = pending_lease->hostname;
-      }
-
-      if (pending_lease->ipv4) {
-        if (client->ipv4)
-          free(client->ipv4);
-        client->ipv4 = pending_lease->ipv4;
-      }
-
-      if (pending_lease->leaseTimeString) {
-        if (client->leaseTimeString)
-          free(client->leaseTimeString);
-        client->leaseTimeString = pending_lease->leaseTimeString;
-      }
-
-      if (pending_lease->leaseExpiryString) {
-        if (client->leaseExpiryString)
-          free(client->leaseExpiryString);
-        client->leaseExpiryString = pending_lease->leaseExpiryString;
-      }
-
-      syslog(LOG_DEBUG, "pending %p, iip %p, prev %p\n", pending_lease, ifaceInfo.pending_leases, prev);
-      if (pending_lease == ifaceInfo.pending_leases)
-        ifaceInfo.pending_leases = pending_lease->next;
-      else
-        prev->next = pending_lease->next;
-
-      free(pending_lease);
-    }
-  }
-
-  if (found)
-    clientlist_response();
-}
-
-void add_pending_lease(char *mac, char *hostname, char *ipv4, char *leaseTimeString, char *leaseExpiryString) {
-  struct client *iter = NULL;
-  struct client *pending_lease = NULL;
-
-  syslog(LOG_DEBUG, "add pending lease");
-
-  if (!mac || !ipv4) {
-    syslog(LOG_DEBUG, "Error add_pending_lease called with mac %p, ipv4 %p\n", mac, ipv4);
-    return;
-  }
-
-  pending_lease = calloc(1, sizeof (struct client));
-  if (!pending_lease) {
-    syslog(LOG_ERR, "ERROR: Unable to allocate memory for pending_lease!");
-    return;
-  }
-
-  if (mac)
-    pending_lease->mac = strdup(strlower(mac));
-  if (hostname)
-    pending_lease->hostname = strdup(hostname);
-  if (ipv4)
-    pending_lease->ipv4 = strdup(ipv4);
-  if (leaseTimeString)
-    pending_lease->leaseTimeString = strdup(leaseTimeString);
-  if (leaseExpiryString)
-    pending_lease->leaseExpiryString = strdup(leaseExpiryString);
-
-  iter = ifaceInfo.pending_leases;
-  if (!iter) {
-    ifaceInfo.pending_leases = pending_lease;
-  }
-  else {
-    while (iter->next) {
-      iter = iter->next;
-    }
-    iter->next = pending_lease;
-  }
-}
-
-void update_lease(char *mac, char *hostname, char *ipv4, char *leaseTimeString, char *leaseExpiryString) {
-  struct interface *iface;
-  struct client *client;
-  bool found = false;
-
-  syslog(LOG_DEBUG, "update lease %s, %s, %s, %s, %s",
-      mac, hostname, ipv4, leaseTimeString, leaseExpiryString);
-
-  if (!mac || !ipv4)
-    return;
-
-  for (iface = ifaceInfo.ifaces; iface; iface = iface->next) {
-    for (client = iface->clients; client; client = client->next) {
-      syslog(LOG_DEBUG, "compare %s, %s", client->mac, mac);
-      if (!strcmp(client->mac, mac)) {
-        found = true;
-        UPDATE_CLIENT(hostname);
-        UPDATE_CLIENT(ipv4);
-        UPDATE_CLIENT(leaseTimeString);
-        UPDATE_CLIENT(leaseExpiryString);
-      }
-    }
-  }
-
-  if (found)
-    clientlist_response();
-  else
-    add_pending_lease(mac, hostname, ipv4, leaseTimeString, leaseExpiryString);
-}
-
-void add_client(struct interface *iface, char *mac, char *hostname) {
+void add_connection(char *mac, char *hostname, char *ipv4, char *leaseTimeString, char *leaseExpiryString, 
+    struct interface *iface) {
   struct client *iter = NULL;
   struct client *client = NULL;
-
-  syslog(LOG_DEBUG, "add client %s %s", mac, hostname);
-  if (!iface || !mac) {
-    syslog(LOG_DEBUG, "Error add_client called with iface %p, mac %p\n", iface, mac);
+  
+  if (!mac)
     return;
-  }
 
-  client = calloc(1, sizeof (struct client));
+  client = calloc(1, sizeof (*client));
+
   if (!client) {
     syslog(LOG_ERR, "ERROR: Unable to allocate memory for client!");
     return;
   }
 
-  if (mac)
-    client->mac = strdup(strlower(mac));
-  if (hostname)
-    client->hostname = strdup(hostname);
+  client->mac = strdup(strlower(mac));
+  UPDATE_CLIENT(hostname);
+  UPDATE_CLIENT(ipv4);
+  UPDATE_CLIENT(leaseTimeString);
+  UPDATE_CLIENT(leaseExpiryString);
+  if (iface)
+    client->iface = iface;
 
-  pthread_mutex_lock(&iface->mutex);
-  iter = iface->clients;
+  pthread_mutex_lock(&ifaceInfo.mutex);
+  iter = ifaceInfo.connections;
   if (!iter) {
-    iface->clients = client;
+    ifaceInfo.connections = client;
   }
   else {
-    while (iter->next) {
-      iter = iter->next;
-    }
+    for (; iter->next; iter = iter->next);
+
     iter->next = client;
   }
-  pthread_mutex_unlock(&iface->mutex);
-
-  update_pending_leases(client);
-  syslog(LOG_DEBUG, "add client done");
+  pthread_mutex_unlock(&ifaceInfo.mutex);
 }
 
-void free_clients(struct client *client) {
-  struct client *prev;
-  while (client) {
-    if (client->mac)
-      free(client->mac);
-    if (client->hostname)
-      free(client->hostname);
-    if (client->ipv4)
-      free(client->ipv4);
-    if (client->leaseTimeString)
-      free(client->leaseTimeString);
-    if (client->leaseExpiryString)
-      free(client->leaseExpiryString);
+void update_connection(char *mac, char *hostname, char *ipv4, char *leaseTimeString, char *leaseExpiryString, 
+    struct interface *iface) {
 
+  bool found = false;
+  struct client *client;
+
+  if (!mac)
+    return;
+
+  for (client = ifaceInfo.connections; client; client = client->next) {
+    if (client->mac && !strcmp(mac, client->mac)) {
+      UPDATE_CLIENT(hostname);
+      UPDATE_CLIENT(ipv4);
+      UPDATE_CLIENT(leaseTimeString);
+      UPDATE_CLIENT(leaseExpiryString);
+      if (iface && iface != client->iface)
+        client->iface = iface;
+      found = true;
+      break;
+    }
+  }
+
+  if (!found)
+    add_connection(mac, hostname, ipv4, leaseTimeString, leaseExpiryString, iface);
+}
+
+void free_connections() {
+  struct client *prev;
+  struct client *client = ifaceInfo.connections;
+
+  while (client) {
+    FREE(client->mac);
+    FREE(client->hostname);
+    FREE(client->ipv4);
+    FREE(client->leaseTimeString);
+    FREE(client->leaseExpiryString);
+    if (client->iface)
+      client->iface = NULL;
     prev = client;
     client = client->next;
     free(prev);
   }
+
+  ifaceInfo.connections = NULL;
 }
 
 void update_clients(struct interface *iface, json_t *object) {
@@ -517,8 +404,7 @@ void update_clients(struct interface *iface, json_t *object) {
     json_t *client = object->child->child;
 
     // Just free and regenerate, make life easier
-    free_clients(iface->clients);
-    iface->clients = NULL;
+    free_connections();
 
     while (client) {
       char *mac, *hostname = NULL;
@@ -532,19 +418,19 @@ void update_clients(struct interface *iface, json_t *object) {
         json_get_string(client, "hostName", &hostname);
       }
 
-      add_client(iface, mac, hostname);
+      update_connection(mac, hostname, NULL, NULL, NULL, iface);
       client = client->next;
     }
+
+    clientlist_response();
   }
 }
 
 void update_leases(json_t *object) {
+  syslog(LOG_DEBUG, "update leases");
   if (object && object->child && object->child->type == JSON_ARRAY && object->child->child) {
     json_t *lease = NULL;
-    struct interface *iface = NULL;
-    struct client *client = NULL;
 
-    // For each lease, go through each client in each iface and find the mac match
     for (lease = object->child->child; lease; lease = lease->next) {
       char *mac = NULL;
       char *ipv4 = NULL;
@@ -558,14 +444,15 @@ void update_leases(json_t *object) {
       json_get_string(lease, "leaseExpiryString", &leaseExpiryString);
       json_get_string(lease, "hostName", &hostname);
 
-      syslog(LOG_DEBUG, "lease mac %s, ipv4 %s, leaseTime %s, leaseExpiry %s\n", mac, ipv4, leaseTimeString, leaseExpiryString);
+      syslog(LOG_DEBUG, "lease mac %s, ipv4 %s, leaseTime %s, leaseExpiry %s, hostName %s\n", mac, ipv4, leaseTimeString, leaseExpiryString, hostname);
       // If no mac, ip or lease information, just skip
       if (!mac || !ipv4 || !leaseTimeString || !leaseExpiryString)
         continue;
 
-      update_lease(mac, hostname, ipv4, leaseTimeString, leaseExpiryString);
+      update_connection(mac, hostname, ipv4, leaseTimeString, leaseExpiryString, NULL);
     }
-
+    
+    clientlist_response();
   }
 }
 
@@ -579,12 +466,15 @@ bool lease_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
   object = json_parse_document(LSMessageGetPayload(msg));
   json_get_bool(object, "returnValue", &returnValue);
 
+  syslog(LOG_DEBUG, "lease callback ret %d", returnValue);
   if (returnValue) {
+    syslog(LOG_DEBUG, "subscribed %d", dhcp_lease.subscribed);
     if (!dhcp_lease.subscribed)
       leases = json_find_first_label(object, "interfaceList");
     else
       leases = json_find_first_label(object, "leases");
 
+    syslog(LOG_DEBUG, "is subscription %d", LSMessageIsSubscription(msg));
     if (LSMessageIsSubscription(msg))
       dhcp_lease.subscribed = true;
 

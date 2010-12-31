@@ -209,7 +209,7 @@ MainAssistant.prototype.setup = function() {
 	this.controller.listen('bluetooth', Mojo.Event.propertyChange, this.toggleChangeHandler);
 	this.controller.listen('usb', Mojo.Event.propertyChange, this.toggleChangeHandler);
 	 
-  this.service.monitorServer("org.webosinternals.freetether", this.server.bind(this));
+  this.serviceStatusSubscription = this.service.monitorServer("org.webosinternals.freetether", this.server.bind(this));
   this.sysInfoSubscription = this.service.getStatus({subscribe: true}, this.handleSysInfo.bind(this));
   this.clientListSubscription = this.service.getClientList({subscribe: true}, this.handleClientList.bind(this));
   this.getUSBSubscription = this.service.getUSB({subscribe: true}, this.updateUSB.bind(this));
@@ -270,7 +270,6 @@ MainAssistant.prototype.updateUSB = function(payload) {
 
 MainAssistant.prototype.addNewClients = function(clients) {
   var client = {};
-  var newClient = {};
   var found = false;
 
   for (var i=0; i<clients.length; i++) {
@@ -284,12 +283,23 @@ MainAssistant.prototype.addNewClients = function(clients) {
       }
     }
 
-    if (!found) {
+    if (found) {
+      if (this.clientListModel.items[j].type != client.type)
+        this.clientListModel.items[j].type = client.type || "usb";
+      if (this.clientListModel.items[j].hostname != client.hostname)
+        this.clientListModel.items[j].hostname = client.hostname || client.mac;
+      if (this.clientListModel.items[j].mac != client.mac)
+        this.clientListModel.items[j].mac = client.mac;
+      if (this.clientListModel.items[j].ipv4 != client.ipv4)
+        this.clientListModel.items[j].ipv4 = client.ipv4;
+    }
+    else {
+      var newClient = {};
       newClient.type = client.type || "usb";
       newClient.name = client.hostname || client.mac;
       newClient.mac = client.mac;
       newClient.ip = client.ipv4;
-      Mojo.Log.error("add new client " + newClient.name);
+      Mojo.Log.error("add new client " + newClient.name + " , type " + newClient.type);
       if (this.clientListModel.items.length && this.clientListModel.items[0].empty)
         this.clientListModel.items.clear();
       this.clientListModel.items.push(newClient);
@@ -310,8 +320,10 @@ MainAssistant.prototype.removeOldClients = function(clients) {
       }
     }
 
-    if (!found)
+    if (!found) {
+      Mojo.Log.error("remove old client " + client.name);
       this.clientListModel.items = this.clientListMode.items.without(client);
+    }
   }
 }
 

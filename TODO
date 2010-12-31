@@ -25,3 +25,7 @@ GUI TODOs
 * Might want to verify no existing connections (e.g. via MHS) before killing mobilehotspotd
 
 * Need to figure out how to know a client is connected via usb, or re-do the structures.  A lot of stuff was made to mimic mobilehotspost service's output but maybe we don't need to care about all of it.  The current structures are set up so that the interface is the upper level, and each interface contains a list of clients.  But maybe the client list should be the upper level, so that unknown interfaces can be seen/listed as well.  Now that the POC is done, re-design without caring what mobilehotspot service json setup is may be in order.
+
+* ADD client info scene on tap of client from client list
+* Do not allow addInterface() to succeed for usb if usbnet is not enabled
+* LSMessageIsSubscription() doesn't seem to work on 2.0, just look for subscribed: true I suppose?
