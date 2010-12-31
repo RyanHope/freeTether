@@ -6,7 +6,6 @@ GUI TODOs
 4. Client list
 5. Change to multi-scene rather than toggles
 6. Webos Internals style top header for main scene + changelog/startup scene
-7. passphrase is visible by default when security is open by default
 8. Spinner for turning on interface, at least wifi
 
 ========================
