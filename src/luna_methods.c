@@ -456,6 +456,19 @@ void update_leases(json_t *object) {
   }
 }
 
+bool is_subscription(LSMessage *msg) {
+  json_t *object;
+  bool subscribed = false;
+
+  if (LSMessageIsSubscription(msg))
+    return true;
+
+  object = json_parse_document(LSMessageGetPayload(msg));
+  json_get_bool(object, "subscribed", &subscribed);
+
+  return subscribed;
+}
+
 bool lease_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
   LSError lserror;
   LSErrorInit(&lserror);
@@ -474,8 +487,8 @@ bool lease_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
     else
       leases = json_find_first_label(object, "leases");
 
-    syslog(LOG_DEBUG, "is subscription %d", LSMessageIsSubscription(msg));
-    if (LSMessageIsSubscription(msg))
+    syslog(LOG_DEBUG, "is subscription %d", is_subscription(msg));
+    if (is_subscription(msg))
       dhcp_lease.subscribed = true;
 
     // leases first child should be an array.  
@@ -488,7 +501,7 @@ bool lease_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
     }
   }
   else {
-    // if (LSMessageIsSubscription(msg))
+    // if (is_subscription(msg))
     dhcp_lease.subscribed = false;
     ifaceInfo.dhcp_state = STOPPED;
   }
@@ -681,7 +694,7 @@ bool iface_status_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
   json_get_bool(object, "returnValue", &returnValue);
 
   if (returnValue) {
-    if (LSMessageIsSubscription(msg))
+    if (is_subscription(msg))
       interface_status.subscribed = true;
 
     json_get_string(object, "ifname", &ifname);
@@ -707,7 +720,7 @@ bool iface_status_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
     }
   }
   else {
-    // if (LSMessageIsSubscription(msg))
+    // if (is_subscription(msg))
     interface_status.subscribed = false;
   }
 
@@ -948,7 +961,7 @@ bool btmon_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
   if (returnValue) {
     char *radio;
 
-    if (LSMessageIsSubscription(msg))
+    if (is_subscription(msg))
       btmonitor.subscribed = true;
 
     json_get_string(object, "radio", &radio);
@@ -965,7 +978,7 @@ bool btmon_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
 
   }
   else {
-    // if (LSMessageIsSubscription(msg))
+    // if (is_subscription(msg))
     btmonitor.subscribed = false;
   }
 
@@ -1008,7 +1021,7 @@ bool bt_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
   json_get_bool(object, "returnValue", &returnValue);
 
   if (returnValue) {
-    if (LSMessageIsSubscription(msg))
+    if (is_subscription(msg))
       bluetooth.subscribed = true;
 
     json_get_string(object, "ifname", &ifname);
@@ -1035,7 +1048,7 @@ bool bt_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
     }
   }
   else {
-    // if (LSMessageIsSubscription(msg))
+    // if (is_subscription(msg))
     bluetooth.subscribed = false;
     remove_iface(iface);
   }

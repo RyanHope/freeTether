@@ -37,4 +37,7 @@ if [ -d /var/palm/ls2/roles ]; then
   /usr/bin/ls-control scan-services || true
 fi
 
+# Temporary Hack to get it to start
+luna-send -n 1 palm://org.webosinternals.freetether/version {}
+
 exit 0
