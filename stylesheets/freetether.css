@@ -100,3 +100,75 @@
   padding: 0px 0px 0px 5px;
   float:left;
 }
+
+.msg_box {
+	display: table;
+	width: 100%;
+	padding: 10px 15px 15px 15px;
+}
+
+.msg_box div {
+	display: table-cell;
+}
+
+.msg_spinner.active {
+	width: 32px;
+	padding-right: 5px;
+}
+
+.msg_area {
+	vertical-align: middle;
+}
+
+.msg_area.error {
+	color: red;
+}
+
+.palm-page-header .header-icon.wifi {
+	background: url(../images/header-icon-mobilehotspot.png) no-repeat;
+}
+
+.palm-dashboard-icon.wifi {
+	background: url(../images/notification-large.png) center no-repeat;
+}
+
+.explanation-text {
+	margin: 3px 23px 15px 23px;
+	font-size: 14px;
+	color: #666;
+}
+
+.icon.technology.wifi {
+	float: right;
+	background: url(../images/wifi.png) center left no-repeat;
+}
+
+.icon.technology.bluetooth {
+	float: right;
+	background: url(../images/bt.png) center left no-repeat;
+}
+
+.icon.technology.usb {
+	float: right;
+	background: url(../images/usb.png) center left no-repeat;
+}
+
+.icon.technology {
+	float: right;
+}
+
+.clientinfodisplay {
+        display: block;
+}
+
+.clientinfodisplay.true {
+        display: none;
+}
+
+.emptydisplay {
+        display: none;
+}
+
+.emptydisplay.true {
+        display: block;
+}

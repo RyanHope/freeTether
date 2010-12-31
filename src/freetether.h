@@ -38,6 +38,9 @@ typedef enum {
 struct client {
   char *mac;
   char *hostname;
+  char *ipv4;
+  char *leaseTimeString;
+  char *leaseExpiryString;
   struct client *next;
 };
 
@@ -73,6 +76,7 @@ struct iface_info {
   DHCP_STATE dhcp_state;
   struct interface *ifaces;
   int num_ifaces;
+  struct client *pending_leases;
   pthread_cond_t state_change;
   pthread_mutex_t mutex;
 };

@@ -38,6 +38,17 @@ var FreeTetherService = Class.create({
     return request;
   },
 
+  getClientList: function(param, callback) {
+    var request = new Mojo.Service.Request(ServiceUri, {
+      method: 'clientList',
+      parameters: param,
+      onSuccess: callback,
+      onFailure: callback
+    });
+
+    return request;
+  },
+
   monitorServer: function(name, callback) {
     var request = new Mojo.Service.Request('palm://com.palm.bus/signal', {
       method: 'registerServerStatus',

@@ -31,6 +31,7 @@ function MainAssistant() {
   this.wifiToggle = {value: false};
   this.btToggle = {value: false};
   this.usbToggle = {value: false};
+  this.clientListModel = {items: [], "listTitle": $L("Connected Devices")};
 
   this.activeInterfaces = [];
 
@@ -58,6 +59,8 @@ MainAssistant.prototype.setup = function() {
 	
 	this.usbGadget           = this.controller.get('usbGadget');
   this.panProfile          = this.controller.get('panProfile');
+
+  this.clientList          = this.controller.get('clientList');
 	
 	this.securityChangedHandler  = this.securityChanged.bindAsEventListener(this);
 	this.usbChangedHandler       = this.usbChanged.bindAsEventListener(this);
@@ -193,6 +196,13 @@ MainAssistant.prototype.setup = function() {
 		}
 	);
 	
+  this.controller.setupWidget(
+   'clientList',
+    {
+      itemTemplate: 'templates/device-item',
+      listTemplate: 'templates/device-list',
+    }, this.clientListModel);
+
 	this.toggleChangeHandler = this.toggleChanged.bindAsEventListener(this);
 	
 	this.controller.listen('wifi', Mojo.Event.propertyChange, this.toggleChangeHandler);
@@ -201,6 +211,7 @@ MainAssistant.prototype.setup = function() {
 	 
   this.service.monitorServer("org.webosinternals.freetether", this.server.bind(this));
   this.sysInfoSubscription = this.service.getStatus({subscribe: true}, this.handleSysInfo.bind(this));
+  this.clientListSubscription = this.service.getClientList({subscribe: true}, this.handleClientList.bind(this));
   this.getUSBSubscription = this.service.getUSB({subscribe: true}, this.updateUSB.bind(this));
   this.btProfileSubscription = this.service.getPrefs({keys:['btprofiledisable'], subscribe: true}, this.updateBTProfile.bind(this));
 };
@@ -254,7 +265,69 @@ MainAssistant.prototype.updateUSB = function(payload) {
   }
 }
 
+MainAssistant.prototype.addNewClients = function(clients) {
+  var client = {};
+  var newClient = {};
+  var found = false;
+
+  for (var i=0; i<clients.length; i++) {
+    client = clients[i];
+    for (var j=0; j<this.clientListModel.items.length; j++) {
+      Mojo.Log.error("check match " + client.mac + " vs. " + this.clientListModel.items[j].mac);
+      if (client.mac === this.clientListModel.items[j].mac && client.ipv4) {
+        found = true;
+        break;
+      }
+    }
+
+    if (!found) {
+      newClient.type = client.type;
+      newClient.name = client.hostname || client.mac;
+      newClient.mac = client.mac;
+      newClient.ip = client.ipv4;
+      Mojo.Log.error("add new client " + newClient.name);
+      if (this.clientListModel.items[0].empty)
+        this.clientListModel.items.clear();
+      this.clientListModel.items.push(newClient);
+    }
+  }
+}
+
+MainAssistant.prototype.removeOldClients = function(clients) {
+  var client = {};
+  var found = false;
+
+  for (var i=0; i<this.clientListModel.items; i++) {
+    client = this.clientListModel.items[i];
+    for (var j=0; j<clients; j++) {
+      if (client.mac === clients[j].mac) {
+        found = true;
+        break;
+      }
+    }
+
+    if (!found)
+      this.clientListModel.items = this.clientListMode.items.without(client);
+  }
+}
+
+MainAssistant.prototype.handleClientList = function(payload) {
+  if (payload && payload.clients) {
+    this.addNewClients(payload.clients);
+    this.removeOldClients(payload.clients);
+  }
+  else {
+    this.clientListModel.items.clear();
+  }
+
+  if (!this.clientListModel.items.length)
+    this.clientListModel.items.push({"empty": true});
+
+  this.controller.modelChanged(this.clientListModel, this);
+}
+
 MainAssistant.prototype.handleSysInfo = function(payload) {
+  /*
   if (!payload.returnValue) {
     this.connections.innerHTML = "ERROR<br>" + payload.errorText;
     return;
@@ -282,12 +355,16 @@ MainAssistant.prototype.handleSysInfo = function(payload) {
 
   }
 
- var i = 0;
- this.activeInterfaces = [];
-  while (payload.sysInfo.interfaces[i]) {
-    this.activeInterfaces.push(Object.clone(payload.sysInfo.interfaces[i++]));
-  }
+  */
 
+  if (!payload || !payload.sysInfo)
+    return;
+
+  var i = 0;
+  this.activeInterfaces = [];
+   while (payload.sysInfo.interfaces[i]) {
+     this.activeInterfaces.push(Object.clone(payload.sysInfo.interfaces[i++]));
+   }
 }
 
 MainAssistant.prototype.handleCommand = function(event) {

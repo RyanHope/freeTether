@@ -14,9 +14,11 @@ CPPFLAGS := -g -DVERSION=\"${VERSION}\" \
 LDFLAGS := -g -L. -L${STAGING_DIR}/usr/lib -llunaservice -lmjson -lglib-2.0 -lpthread -lrt -lnetbridge
 
 OBJECTS=freetether.o luna_service.o luna_methods.o ip_forward.o usb_gadget.o
+HEADERS=freetether.h luna_service.h luna_methods.h
 
 all: freetether
 
+$(OBJECTS): $(HEADERS)
 freetether: $(OBJECTS)
 
 clobber:
