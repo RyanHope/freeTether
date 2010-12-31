@@ -186,8 +186,6 @@ static char *generate_clientlist_json() {
 
   for (client = ifaceInfo.connections; client; client = client->next) {
     syslog(LOG_DEBUG, "client mac %s\n", client->mac);
-    sleep(1);
-
     if (!first)
       asprintf(&payload, "%s, ", payload);
     else
@@ -359,6 +357,7 @@ void update_connection(char *mac, char *hostname, char *ipv4, char *leaseTimeStr
   bool found = false;
   struct client *client;
 
+  syslog(LOG_DEBUG, "UPDATE CONNECTiON %s, %s, %s, %s, %s, %p\n", mac, hostname, ipv4, leaseTimeString, leaseExpiryString, iface);
   if (!mac)
     return;
 
@@ -375,8 +374,10 @@ void update_connection(char *mac, char *hostname, char *ipv4, char *leaseTimeStr
     }
   }
 
-  if (!found)
+  if (!found) {
+    syslog(LOG_DEBUG, "  add new connection");
     add_connection(mac, hostname, ipv4, leaseTimeString, leaseExpiryString, iface);
+  }
 }
 
 void free_connections() {
@@ -403,9 +404,6 @@ void update_clients(struct interface *iface, json_t *object) {
   if (object && object->child && object->child->type == JSON_ARRAY && object->child->child) {
     json_t *client = object->child->child;
 
-    // Just free and regenerate, make life easier
-    free_connections();
-
     while (client) {
       char *mac, *hostname = NULL;
       json_t *wifi_client = json_find_first_label(client, "clientInfo");
@@ -430,6 +428,9 @@ void update_leases(json_t *object) {
   syslog(LOG_DEBUG, "update leases");
   if (object && object->child && object->child->type == JSON_ARRAY && object->child->child) {
     json_t *lease = NULL;
+
+    // Just free and regenerate, make life easier
+    free_connections();
 
     for (lease = object->child->child; lease; lease = lease->next) {
       char *mac = NULL;

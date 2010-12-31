@@ -276,7 +276,6 @@ MainAssistant.prototype.addNewClients = function(clients) {
     found = false;
     client = clients[i];
     for (var j=0; j<this.clientListModel.items.length; j++) {
-      Mojo.Log.error("check match " + client.mac + " vs. " + this.clientListModel.items[j].mac + " - j " + j);
       if (client.mac === this.clientListModel.items[j].mac && client.ipv4) {
         found = true;
         break;
@@ -284,7 +283,8 @@ MainAssistant.prototype.addNewClients = function(clients) {
     }
 
     if (found) {
-      if (this.clientListModel.items[j].type != client.type)
+      Mojo.Log.error("Found client type " + client.type + " hostname " + client.hostname + " mac " + client.mac);
+      if (!this.clientListModel.items[j].type != client.type)
         this.clientListModel.items[j].type = client.type || "usb";
       if (this.clientListModel.items[j].hostname != client.hostname)
         this.clientListModel.items[j].hostname = client.hostname || client.mac;
@@ -294,6 +294,7 @@ MainAssistant.prototype.addNewClients = function(clients) {
         this.clientListModel.items[j].ipv4 = client.ipv4;
     }
     else {
+      Mojo.Log.error("New client type " + client.type + " hostname " + client.hostname + " mac " + client.mac);
       var newClient = {};
       newClient.type = client.type || "usb";
       newClient.name = client.hostname || client.mac;
