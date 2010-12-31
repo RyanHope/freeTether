@@ -214,6 +214,9 @@ MainAssistant.prototype.setup = function() {
   this.clientListSubscription = this.service.getClientList({subscribe: true}, this.handleClientList.bind(this));
   this.getUSBSubscription = this.service.getUSB({subscribe: true}, this.updateUSB.bind(this));
   this.btProfileSubscription = this.service.getPrefs({keys:['btprofiledisable'], subscribe: true}, this.updateBTProfile.bind(this));
+	
+	if (this.prefs.security == 'Open')
+    this.passphraseRow.style.display = 'none';
 };
 
 MainAssistant.prototype.usbChanged = function(event) {
