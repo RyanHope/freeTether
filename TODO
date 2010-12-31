@@ -25,3 +25,5 @@ GUI TODOs
 * Verify mutexes and put some around subscribe globals
 * Add some sort of emergency recover, start from scratch, wipe out all interfaces button for now
 * Might want to verify no existing connections (e.g. via MHS) before killing mobilehotspotd
+
+* Need to figure out how to know a client is connected via usb, or re-do the structures.  A lot of stuff was made to mimic mobilehotspost service's output but maybe we don't need to care about all of it.  The current structures are set up so that the interface is the upper level, and each interface contains a list of clients.  But maybe the client list should be the upper level, so that unknown interfaces can be seen/listed as well.  Now that the POC is done, re-design without caring what mobilehotspot service json setup is may be in order.

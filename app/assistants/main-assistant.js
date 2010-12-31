@@ -271,9 +271,10 @@ MainAssistant.prototype.addNewClients = function(clients) {
   var found = false;
 
   for (var i=0; i<clients.length; i++) {
+    found = false;
     client = clients[i];
     for (var j=0; j<this.clientListModel.items.length; j++) {
-      Mojo.Log.error("check match " + client.mac + " vs. " + this.clientListModel.items[j].mac);
+      Mojo.Log.error("check match " + client.mac + " vs. " + this.clientListModel.items[j].mac + " - j " + j);
       if (client.mac === this.clientListModel.items[j].mac && client.ipv4) {
         found = true;
         break;

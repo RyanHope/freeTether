@@ -730,6 +730,9 @@ void add_bridge(struct interface *iface) {
   LSErrorInit(&lserror);
   int ret;
 
+  if (!iface)
+    return;
+
   // TODO: Check that bridge/interface doesn't already exist
   ret = br_add_bridge("bridge0");
   syslog(LOG_DEBUG, "add bridge %d\n", ret);
@@ -981,6 +984,7 @@ struct interface *request_interface(char *type, char *ifname, struct wifi_ap *ap
   struct interface *iter = NULL;
   char *payload = NULL;
 
+  syslog(LOG_DEBUG, "request interface %s, %s\n", type, ifname);
   if (ifname && get_iface(NULL, ifname)) {
     syslog(LOG_WARNING, "WARNING: Already requested interface %s, not setting up again\n", ifname);
     return NULL;
@@ -1210,13 +1214,18 @@ bool interfaceAdd(LSHandle *sh, LSMessage *msg, void *ctx) {
       LS_PRIV_SUBSCRIBE("btmonitor/monitor/subscribenotifications", btmonitor, (void *)iface);
   }
   else if (!strcmp(type, "usb")) {
-    json_get_string(object, "ifname", &ifname);
+    // TODO: get the states working (or not) for usb
+    if (object->child && object->child->child && object->child->child->type == JSON_OBJECT)
+      json_get_string(object->child->child, "ifname", &ifname);
+
     if (!ifname) {
       LS_REPLY_ERROR("Invalid ifname specified");
       return true;
     }
 
-    request_interface("usb", ifname, NULL);
+    struct interface *iface = request_interface("usb", ifname, NULL);
+    if (iface)
+      add_bridge(iface);
   }
   else {
     LS_REPLY_ERROR("Invalid Interface type specified");
