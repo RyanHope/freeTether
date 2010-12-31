@@ -1,5 +1,10 @@
 function MainAssistant() {
 
+  this.DEFAULT_NETWORK = 'freeTether';
+  this.DEFAULT_SECURITY = 'Open';
+  this.BT_IFNAME = "bsl0";
+  this.USB_IFNAME = "usb0:1";
+
 	this.cookie = new preferenceCookie();
   this.service = new FreeTetherService();
 	this.prefs = this.cookie.get();
@@ -26,7 +31,9 @@ function MainAssistant() {
   this.wifiToggle = {value: false};
   this.btToggle = {value: false};
   this.usbToggle = {value: false};
-	
+
+  this.activeInterfaces = [];
+
 }
 
 MainAssistant.prototype.setup = function() {
@@ -76,7 +83,7 @@ MainAssistant.prototype.setup = function() {
       label: 'Security',
       choices:
         [
-          {label:'Open', value:'open'},
+          {label:'Open', value:'Open'},
           {label:'WPA/WPA2 Personal', value:'wpa'},
         ],
         modelProperty: 'security'
@@ -120,7 +127,7 @@ MainAssistant.prototype.setup = function() {
   );
 	
 	this.controller.setupWidget(
-		'tetherWiFi',
+		'wifi',
 		{
   			trueLabel:  'On',
  			falseLabel: 'Off',
@@ -130,7 +137,7 @@ MainAssistant.prototype.setup = function() {
 	);
 
 	this.controller.setupWidget(
-		'tetherBT',
+		'bluetooth',
 		{
   			trueLabel:  'On',
  			falseLabel: 'Off',
@@ -140,7 +147,7 @@ MainAssistant.prototype.setup = function() {
 	);
 	
 	this.controller.setupWidget(
-		'tetherUSB',
+		'usb',
 		{
   			trueLabel:  'On',
  			falseLabel: 'Off',
@@ -188,12 +195,12 @@ MainAssistant.prototype.setup = function() {
 	
 	this.toggleChangeHandler = this.toggleChanged.bindAsEventListener(this);
 	
-	this.controller.listen('tetherWiFi', Mojo.Event.propertyChange, this.toggleChangeHandler);
-	this.controller.listen('tetherBT', Mojo.Event.propertyChange, this.toggleChangeHandler);
-	this.controller.listen('tetherUSB', Mojo.Event.propertyChange, this.toggleChangeHandler);
+	this.controller.listen('wifi', Mojo.Event.propertyChange, this.toggleChangeHandler);
+	this.controller.listen('bluetooth', Mojo.Event.propertyChange, this.toggleChangeHandler);
+	this.controller.listen('usb', Mojo.Event.propertyChange, this.toggleChangeHandler);
 	 
   this.service.monitorServer("org.webosinternals.freetether", this.server.bind(this));
-  this.sysInfoSubscription = this.service.getStatus({subscribe: true}, this.updateOptions.bind(this));
+  this.sysInfoSubscription = this.service.getStatus({subscribe: true}, this.handleSysInfo.bind(this));
   this.getUSBSubscription = this.service.getUSB({subscribe: true}, this.updateUSB.bind(this));
   this.btProfileSubscription = this.service.getPrefs({keys:['btprofiledisable'], subscribe: true}, this.updateBTProfile.bind(this));
 };
@@ -204,7 +211,7 @@ MainAssistant.prototype.usbChanged = function(event) {
 
 MainAssistant.prototype.securityChanged = function(event) {
   this.cookie.put(this.prefs);
-  if (this.prefs.security == 'open') {
+  if (this.prefs.security == 'Open') {
     this.passphraseRow.style.display = 'none';
     this.securityRow.className = 'palm-row last';
   } else {
@@ -247,8 +254,7 @@ MainAssistant.prototype.updateUSB = function(payload) {
   }
 }
 
-MainAssistant.prototype.updateOptions = function(payload) {
-  Mojo.Log.error("update options callback!");
+MainAssistant.prototype.handleSysInfo = function(payload) {
   if (!payload.returnValue) {
     this.connections.innerHTML = "ERROR<br>" + payload.errorText;
     return;
@@ -261,20 +267,27 @@ MainAssistant.prototype.updateOptions = function(payload) {
     "dhcp state: " + payload.sysInfo.stateDHCPServer + "<br>" + 
     "interfaces: " + "<br>"; 
 
-  Mojo.Log.error("hey interfaces " + payload.sysInfo.interfaces[0]);
   var i = 0;
   while (payload.sysInfo.interfaces[i]) {
     var p = payload.sysInfo.interfaces[i++];
     this.connections.innerHTML = this.connections.innerHTML + 
       "-- Interface " + i + " --<br>" + 
-      "&nbsp&nbspifname: " + p.ifname + "<br>" + 
-      "&nbsp&nbspiface state: " + p.stateInterface + "<br>" + 
-      "&nbsp&nbspiface bridge state: " + p.stateInterfaceBridge + "<br>" + 
-      "&nbsp&nbsplink state: " + p.stateLink + "<br>" + 
-      "&nbsp&nbsptype: " + p.type + "<br>" + 
-      "&nbsp&nbspssid: " + p.SSID + "<br>" + 
-      "&nbsp&nbspsecurity: " + p.Security + "<br>";
+      "&nbspifname: " + p.ifname + "<br>" + 
+      "&nbspiface state: " + p.stateInterface + "<br>" + 
+      "&nbspiface bridge state: " + p.stateInterfaceBridge + "<br>" + 
+      "&nbsplink state: " + p.stateLink + "<br>" + 
+      "&nbsptype: " + p.type + "<br>" + 
+      "&nbspssid: " + p.SSID + "<br>" + 
+      "&nbspsecurity: " + p.Security + "<br>";
+
   }
+
+ var i = 0;
+ this.activeInterfaces = [];
+  while (payload.sysInfo.interfaces[i]) {
+    this.activeInterfaces.push(Object.clone(payload.sysInfo.interfaces[i++]));
+  }
+
 }
 
 MainAssistant.prototype.handleCommand = function(event) {
@@ -314,58 +327,58 @@ MainAssistant.prototype.handleCommand = function(event) {
 	
 }
 
-MainAssistant.prototype.toggleChanged = function(event) {
-  var f = function(payload) {
-    for (p in payload) {
-      Mojo.Log.error(p + " : " + payload[p]);
-      if (typeof(p) === Object) {
-        for (s in payload[p]) {
-          Mojo.Log.error(s + " : " + payload[p][s]);
-        }
-      }
-    }
-  };
+MainAssistant.prototype.addInterface = function(type) {
+  var payload = {};
+  payload[type] = {};
 
-	this.prefs[event.target.id] = event.value;
-	this.cookie.put(this.prefs);
-  switch(event.target.id) {
-    case 'tetherWiFi':
-      //if (!this.statusSubscription)
-        //this.statusSubscription = this.service.getStatus({"subscribe":true},f);
-      if (event.value) {
-        this.service.addInterface({
-          wifi: {
-            SSID: "WebOS Testing",
-            Security: "Open",
-            interfaceIdleTimeout: true
-          }
-        }, f);
-      }
-      else {
-        this.service.removeInterface({
-          wifi: {
-            SSID:"WebOS Testing",
-          }
-        }, f);
-      }
+  switch(type) {
+    case 'wifi':
+      payload[type].SSID = this.prefs.network || this.DEFAULT_NETWORK;
+      payload[type].Security = this.prefs.security || this.DEFAULT_SECURITY;
+      
+      if (payload[type].Security !== 'Open')
+        payload[type].Passphrase = this.prefs.passphrase || "";
+
+      //payload[type].interfaceIdleTimeout = true;
       break;
-    case 'tetherBT':
-      if (event.value) {
-        this.service.addInterface({bluetooth:{}});
-      }
-      else {
-        this.service.removeInterface({bluetooth: {ifname: "bsl0"}});
-      }
+    case 'bluetooth':
+      payload[type].ifname = this.BT_IFNAME;
       break;
-    case 'tetherUSB':
-      if (event.value) {
-        this.service.addInterface({usb: {ifname: "usb0:1"}});
-      }
-      else {
-        this.service.removeInterface({usb: {ifname: "usb0:1"}});
-      }
+    case 'usb':
+      payload[type].ifname = this.USB_IFNAME;
       break;
   }
+
+  this.service.addInterface(payload);
+}
+
+MainAssistant.prototype.removeInterface = function(type) {
+  var iface = {};
+  for (var i=0; i<this.activeInterfaces.length; i++) {
+    iface = this.activeInterfaces[i];
+    if (iface.type.toLowerCase() === type) {
+      var payload = {};
+      payload[type] = {};
+
+      if (iface.SSID)
+        payload[type].SSID = iface.SSID;
+      if (iface.ifname)
+        payload[type].ifname = iface.ifname;
+
+      this.service.removeInterface(payload);
+    }
+  }
+}
+
+MainAssistant.prototype.toggleChanged = function(event) {
+	this.prefs[event.target.id] = event.value;
+	this.cookie.put(this.prefs);
+
+  if (event.value) 
+    this.addInterface(event.target.id);
+  else
+    this.removeInterface(event.target.id);
+
 }
 
 MainAssistant.prototype.activate = function(event) {

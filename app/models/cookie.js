@@ -15,7 +15,7 @@ preferenceCookie.prototype.get = function(reload)
 			{
 				network:      'freeTether',
 				passphrase:   '',
-				security:     'open'
+				security:     'Open'
 				
 			};
 			

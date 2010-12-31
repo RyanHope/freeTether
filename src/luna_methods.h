@@ -27,7 +27,7 @@ do { \
   } \
 } while (0)
 
-#define LS_PRIV_SUBSCRIBE(method, cb, ctx) \
-  LSCall(priv_serviceHandle, "luna://com.palm."method, "{\"subscribe\":true}", cb, ctx, NULL, &lserror)
+#define LS_PRIV_SUBSCRIBE(method, sub, ctx) \
+  LSCall(priv_serviceHandle, "luna://com.palm."method, "{\"subscribe\":true}", sub.callback, ctx, &sub.token, &lserror)
 
 #endif /* LUNA_METHODS_H */

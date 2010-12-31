@@ -23,12 +23,13 @@
 struct subscription {
   LSFilterFunc callback;
   bool subscribed;
+  LSMessageToken token;
 };
 
-struct subscription dhcp_lease = {lease_callback, false};
-struct subscription interface_status = {iface_status_callback, false};
-struct subscription bluetooth = {bt_callback, false};
-struct subscription btmonitor = {btmon_callback, false};
+struct subscription dhcp_lease = {lease_callback, false, 0};
+struct subscription interface_status = {iface_status_callback, false, 0};
+struct subscription bluetooth = {bt_callback, false, 0};
+struct subscription btmonitor = {btmon_callback, false, 0};
 
 static char *ipstate_str() {
   switch(ifaceInfo.ip_state) {
@@ -143,7 +144,7 @@ static char *generate_sysinfo_json() {
         payload, iface->ifname, ifacestate_str(iface), bridgestate_str(iface), linkstate_str(iface), 
         iface->type);
 
-    if (!strcmp(iface->type, "WiFi")) {
+    if (!strcmp(iface->type, "wifi")) {
       asprintf(&payload, "%s, \"SSID\": \"%s\", \"Security\": \"%s\"",
           payload, iface->ap->ssid, iface->ap->security);
       }
@@ -369,12 +370,12 @@ bool remove_netif_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
   LSError lserror;
   LSErrorInit(&lserror);
   json_t *object;
-  bool ret = FALSE;
+  bool returnValue = FALSE;
 
   object = json_parse_document(LSMessageGetPayload(msg));
-  json_get_bool(object, "returnValue", &ret);
+  json_get_bool(object, "returnValue", &returnValue);
 
-  if (ret) {
+  if (returnValue) {
     pthread_mutex_lock(&ifaceInfo.mutex);
     if (ifaceInfo.ip_state == REMOVE_REQUESTED)
       ifaceInfo.ip_state = REMOVED;
@@ -389,12 +390,12 @@ bool dhcp_final_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
   LSError lserror;
   LSErrorInit(&lserror);
   json_t *object;
-  bool ret = FALSE;
+  bool returnValue = FALSE;
 
   object = json_parse_document(LSMessageGetPayload(msg));
-  json_get_bool(object, "returnValue", &ret);
+  json_get_bool(object, "returnValue", &returnValue);
 
-  if (ret) {
+  if (returnValue) {
     pthread_mutex_lock(&ifaceInfo.mutex);
     ifaceInfo.dhcp_state = STOPPED;
     pthread_mutex_unlock(&ifaceInfo.mutex);
@@ -440,7 +441,7 @@ bool dhcp_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
     pthread_mutex_unlock(&ifaceInfo.mutex);
 
     if (!dhcp_lease.subscribed)
-      LS_PRIV_SUBSCRIBE("dhcp/server/leaseInformation", dhcp_lease.callback, NULL);
+      LS_PRIV_SUBSCRIBE("dhcp/server/leaseInformation", dhcp_lease, NULL);
   }
 
   sysinfo_response();
@@ -586,12 +587,21 @@ bool iface_status_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
 void remove_iface(struct interface *iface) {
   struct interface *iter = ifaceInfo.ifaces;
 
-  if (!iface)
+  if (!iface || !iter)
     return;
 
   if (iter == iface) {
     ifaceInfo.ifaces = iface->next;
     free_iface(iface);
+
+    if (!ifaceInfo.ifaces) {
+      LSError lserror;
+      LSErrorInit(&lserror);
+
+      LSCall(priv_serviceHandle, "palm://com.palm.dhcp/interfaceFinalize",
+          "{\"interface\":\"bridge0\"}", dhcp_final_callback, NULL, NULL, &lserror);
+    }
+
     return;
   }
 
@@ -621,40 +631,22 @@ bool delete_ap_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
   LSError lserror;
   LSErrorInit(&lserror);
   json_t *object;
-  struct interface *iface = NULL;
-  bool ret = false;
+  struct interface *iface = (struct interface *)ctx;
+  bool returnValue = false;
   char *ifname = NULL;
 
   object = json_parse_document(LSMessageGetPayload(msg));
-  json_get_bool(object, "returnValue", &ret);
+  json_get_bool(object, "returnValue", &returnValue);
 
-  if (ret && iface->iface_state == DESTROY_REQUESTED) {
-    iface = get_destroy_iface();
+  if (returnValue) {
     if (iface) {
-      if (!strcmp(iface->type, "wifi")) {
-        LSCall(priv_serviceHandle, "luna://com.palm.wifi/setstate", "{\"state\":\"enabled\"}", 
-            NULL, NULL, NULL, &lserror);
-      }
-
+      LSCallCancel(priv_serviceHandle, interface_status.token, &lserror);
+      interface_status.subscribed = false;
+      interface_status.token = 0;
       remove_iface(iface);
-      if (!num_interfaces()) {
-        char *payload = NULL;
-
-        asprintf(&payload, "{\"interface\": \"%s\"}", ifaceInfo.bridge);
-        if (!payload)
-          return false;
-
-        if (ifaceInfo.dhcp_state != STOPPED) {
-          pthread_mutex_lock(&ifaceInfo.mutex);
-          ifaceInfo.dhcp_state = STOP_REQUESTED;
-          pthread_mutex_unlock(&ifaceInfo.mutex);
-          LSCall(priv_serviceHandle, "palm://com.palm.dhcp/interfaceFinalize", payload, 
-              dhcp_final_callback, NULL, NULL, &lserror);
-        }
-
-        free(payload);
-      }
     }
+    LSCall(priv_serviceHandle, "luna://com.palm.wifi/setstate", "{\"state\":\"enabled\"}", 
+        NULL, NULL, NULL, &lserror);
   }
 
   sysinfo_response();
@@ -682,7 +674,7 @@ bool create_ap_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
       iface->iface_state = CREATED;
       pthread_mutex_unlock(&ifaceInfo.ifaces[0].mutex);
       if (!interface_status.subscribed)
-        LS_PRIV_SUBSCRIBE("wifi/interfaceStatus", interface_status.callback, ctx);
+        LS_PRIV_SUBSCRIBE("wifi/interfaceStatus", interface_status, ctx);
     }
   }
   else {
@@ -712,7 +704,7 @@ int delete_ap(char *type, char *ifname) {
   pthread_mutex_unlock(&iface->mutex);
 
   LSCall(priv_serviceHandle, "luna://com.palm.wifi/deleteAP", payload, delete_ap_callback, 
-      NULL, NULL, &lserror);
+      (void *)iface, NULL, &lserror);
 
   free(payload);
 
@@ -737,22 +729,10 @@ bool interfaceRemove(LSHandle *sh, LSMessage *msg, void *ctx) {
   json_t *type_label = json_find_first_label(object, type);
   json_get_string(type_label->child, "ifname", &ifname);
 
-  if (!strcmp(type, "wifi")) {
+  if (!strcmp(type, "wifi"))
     delete_ap(type, ifname);
-    // TODO: move enable wifi to delete_ap callback 
-    LSCall(priv_serviceHandle, "palm://com.palm.wifi/setstate", "{\"state\":\"enabled\"}", 
-        NULL, NULL, NULL, &lserror);
-  }
-  else {
+  else
     remove_iface(get_iface(type, ifname));
-  }
-
-  if (!ifaceInfo.ifaces) {
-    LSCall(priv_serviceHandle, "palm://com.palm.dhcp/interfaceFinalize",
-        "{\"interface\":\"bridge0\"}", NULL, NULL, NULL, &lserror);
-    LSCall(priv_serviceHandle, "palm://com.palm.netroute/removeNetIf",
-        "{\"ifName\":\"bridge0\"}", NULL, NULL, NULL, &lserror);
-  }
 
   LSMessageReply(sh, msg, "{\"returnValue\":true}", &lserror);
   return true;
@@ -800,7 +780,7 @@ struct interface *request_interface(char *type, char *ifname, struct wifi_ap *ap
 
   pthread_mutex_unlock(&iface->mutex);
 
-  if (!strcmp(type, "WiFi")) {
+  if (!strcmp(type, "wifi")) {
     asprintf(&payload, "{\"SSID\": \"%s\", \"Security\": \"%s\"", ap->ssid, ap->security);
 
     if (ap->passphrase /* && not Open ? */)
@@ -841,14 +821,14 @@ bool btmon_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
 
     json_get_string(object, "radio", &radio);
     if (radio && !strcmp(radio, "on") && !bluetooth.subscribed) {
-      LS_PRIV_SUBSCRIBE("bluetooth/pan/subscribenotifications", bluetooth.callback, ctx);
+      LS_PRIV_SUBSCRIBE("bluetooth/pan/subscribenotifications", bluetooth, ctx);
     }
     else {
       char *notification;
 
       json_get_string(object, "notification", &notification);
       if (notification && !strcmp(notification, "notifnradioon") && !bluetooth.subscribed)
-        LS_PRIV_SUBSCRIBE("bluetooth/pan/subscribenotifications", bluetooth.callback, ctx);
+        LS_PRIV_SUBSCRIBE("bluetooth/pan/subscribenotifications", bluetooth, ctx);
     }
 
   }
@@ -865,14 +845,18 @@ bool disable_wifi_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
   LSErrorInit(&lserror);
   json_t *object;
   bool returnValue = false;
+  char *errorText = NULL;
   struct wifi_ap *ap;
   
   object = json_parse_document(LSMessageGetPayload(msg));
   json_get_bool(object, "returnValue", &returnValue);
 
-  if (returnValue) {
+  if (!returnValue)
+    json_get_string(object, "errorText", &errorText);
+
+  if (returnValue || (errorText && !strcmp(errorText, "AlreadyDisabled"))) {
     ap = (struct wifi_ap *)ctx;
-    request_interface("WiFi", NULL, ap);
+    request_interface("wifi", NULL, ap);
   }
   
   return true;
@@ -968,7 +952,7 @@ bool interfaceAdd(LSHandle *sh, LSMessage *msg, void *ctx) {
       strcpy(security, "Open");
     }
 
-    ap = malloc(sizeof(struct wifi_ap));
+    ap = calloc(1, sizeof(struct wifi_ap));
     if (!ap) {
       LS_REPLY_ERROR("Out of memory");
       return true;
@@ -987,7 +971,7 @@ bool interfaceAdd(LSHandle *sh, LSMessage *msg, void *ctx) {
   else if (!strcmp(type, "bluetooth")) {
     struct interface *iface = request_interface("bluetooth", NULL, NULL);
     if (!btmonitor.subscribed)
-      LS_PRIV_SUBSCRIBE("btmonitor/monitor/subscribenotifications", btmonitor.callback, (void *)iface);
+      LS_PRIV_SUBSCRIBE("btmonitor/monitor/subscribenotifications", btmonitor, (void *)iface);
   }
   else if (!strcmp(type, "usb")) {
     json_get_string(object, "ifname", &ifname);
