@@ -29,9 +29,15 @@ function MainAssistant() {
   
   this.usbModel = {value: 0};  
   this.panModel = {value: false};
+	
   this.wifiToggle = {value: false};
   this.btToggle = {value: false};
   this.usbToggle = {value: false};
+	
+	this.wifiSpinner = {spinning: true};
+  this.btSpinner = {spinning: true};
+  this.usbSpinner = {spinning: true};
+	
   this.clientListModel = {items: [], "listTitle": $L("Connected Devices")};
 
   this.activeInterfaces = [];
@@ -215,6 +221,10 @@ MainAssistant.prototype.setup = function() {
   this.clientListSubscription = this.service.getClientList({subscribe: true}, this.handleClientList.bind(this));
   this.getUSBSubscription = this.service.getUSB({subscribe: true}, this.updateUSB.bind(this));
   this.btProfileSubscription = this.service.getPrefs({keys:['btprofiledisable'], subscribe: true}, this.updateBTProfile.bind(this));
+	
+	this.controller.setupWidget('wifiSpinner', {}, this.wifiSpinner);
+	this.controller.setupWidget('btSpinner', {}, this.btSpinner);
+	this.controller.setupWidget('usbSpinner', {}, this.usbSpinner);
 	
 	this.updateSecurityWidgets();
 };
