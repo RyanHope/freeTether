@@ -2,6 +2,7 @@ function MainAssistant() {
 
   this.DEFAULT_NETWORK = 'freeTether';
   this.DEFAULT_SECURITY = 'Open';
+	this.WIFI_IFNAME = "uap0";
   this.BT_IFNAME = "bsl0";
   this.USB_IFNAME = "usb0:1";
 
@@ -248,17 +249,17 @@ MainAssistant.prototype.server = function(payload) {
 }
 
 MainAssistant.prototype.updateBTProfile = function(payload) {
-  this.panModel.pan = true;
+  this.panModel.value = true;
   if (payload.returnValue) {
     Mojo.Log.error(payload.btprofiledisable)
     if (payload.btprofiledisable instanceof Array) {
       for(var i = 0; i < payload.btprofiledisable.length; i++) {
         if (payload.btprofiledisable[i] == 'PAN')
-          this.panModel.pan = false;       
+          this.panModel.value = false;       
       }
     } else {
       if (payload.btprofiledisable == 'PAN')
-        this.panModel.pan = false;
+        this.panModel.value = false;
     }
     this.controller.modelChanged(this.panModel, this);
   }
@@ -347,44 +348,32 @@ MainAssistant.prototype.handleClientList = function(payload) {
 }
 
 MainAssistant.prototype.handleSysInfo = function(payload) {
-  /*
-  if (!payload.returnValue) {
-    this.connections.innerHTML = "ERROR<br>" + payload.errorText;
-    return;
-  }
-
-  this.connections.innerHTML = 
-    "bridge: " + payload.sysInfo.ifbridge + "<br>" + 
-    "ip: " + payload.sysInfo.IPv4Address + "<br>" + 
-    "ip state: " + payload.sysInfo.stateIPv4 + "<br>" + 
-    "dhcp state: " + payload.sysInfo.stateDHCPServer + "<br>" + 
-    "interfaces: " + "<br>"; 
-
-  var i = 0;
-  while (payload.sysInfo.interfaces[i]) {
-    var p = payload.sysInfo.interfaces[i++];
-    this.connections.innerHTML = this.connections.innerHTML + 
-      "-- Interface " + i + " --<br>" + 
-      "&nbspifname: " + p.ifname + "<br>" + 
-      "&nbspiface state: " + p.stateInterface + "<br>" + 
-      "&nbspiface bridge state: " + p.stateInterfaceBridge + "<br>" + 
-      "&nbsplink state: " + p.stateLink + "<br>" + 
-      "&nbsptype: " + p.type + "<br>" + 
-      "&nbspssid: " + p.SSID + "<br>" + 
-      "&nbspsecurity: " + p.Security + "<br>";
-
-  }
-
-  */
 
   if (!payload || !payload.sysInfo)
     return;
 
   var i = 0;
   this.activeInterfaces = [];
+	this.wifiToggle.value = false;
+	this.usbToggle.value = false;
+	this.btToggle.value = false;
    while (payload.sysInfo.interfaces[i]) {
+	 	 switch (payload.sysInfo.interfaces[i].ifname) {
+		  case this.WIFI_IFNAME:
+			 this.wifiToggle.value = true;
+			 break;
+		 case this.USB_IFNAME:
+       this.usbToggle.value = true;
+       break;
+		 case this.BT_IFNAME:
+       this.btToggle.value = true;
+       break;
+		 }
      this.activeInterfaces.push(Object.clone(payload.sysInfo.interfaces[i++]));
    }
+	 this.controller.modelChanged(this.wifiToggle, this);
+	 this.controller.modelChanged(this.usbToggle, this);
+	 this.controller.modelChanged(this.btToggle, this);
 }
 
 MainAssistant.prototype.handleCommand = function(event) {
