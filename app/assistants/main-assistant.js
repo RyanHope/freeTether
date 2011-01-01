@@ -34,9 +34,9 @@ function MainAssistant() {
   this.btToggle = {value: false};
   this.usbToggle = {value: false};
 	
-	this.wifiSpinner = {spinning: true};
-  this.btSpinner = {spinning: true};
-  this.usbSpinner = {spinning: true};
+	this.wifiSpinner = {spinning: false};
+  this.btSpinner = {spinning: false};
+  this.usbSpinner = {spinning: false};
 	
   this.clientListModel = {items: [], "listTitle": $L("Connected Devices")};
 
@@ -369,14 +369,23 @@ MainAssistant.prototype.handleSysInfo = function(payload) {
 	this.btToggle.value = false;
    while (payload.sysInfo.interfaces[i]) {
 	 	 switch (payload.sysInfo.interfaces[i].ifname) {
-		  case this.WIFI_IFNAME:
-			 this.wifiToggle.value = true;
+		 	case this.WIFI_IFNAME:
+		 		this.wifiToggle.value = true;
+		 		if (payload.sysInfo.stateIPv4 == "ASSIGNED" &&
+		 		payload.sysInfo.stateDHCPServer == "STARTED" &&
+		 		payload.sysInfo.interfaces[i].stateInterfaceBridged == "BRIDGED" &&
+		 		payload.sysInfo.interfaces[i].stateLink == "UP") {
+          this.wifiSpinner.spinning = false;
+		 		}
+		 		else {
+		 			this.wifiSpinner.spinning = true;
+		 		}
 			 break;
 		 case this.USB_IFNAME:
-       this.usbToggle.value = true;
+       this.usbToggle.value = false;
        break;
 		 case this.BT_IFNAME:
-       this.btToggle.value = true;
+       this.btToggle.value = false;
        break;
 		 }
      this.activeInterfaces.push(Object.clone(payload.sysInfo.interfaces[i++]));
@@ -384,6 +393,9 @@ MainAssistant.prototype.handleSysInfo = function(payload) {
 	 this.controller.modelChanged(this.wifiToggle, this);
 	 this.controller.modelChanged(this.usbToggle, this);
 	 this.controller.modelChanged(this.btToggle, this);
+	 this.controller.modelChanged(this.wifiSpinner, this);
+   this.controller.modelChanged(this.usbSpinner, this);
+   this.controller.modelChanged(this.btSpinner, this);
 }
 
 MainAssistant.prototype.handleCommand = function(event) {
@@ -469,6 +481,11 @@ MainAssistant.prototype.removeInterface = function(type) {
 MainAssistant.prototype.toggleChanged = function(event) {
 	this.prefs[event.target.id] = event.value;
 	this.cookie.put(this.prefs);
+
+  if (event.target.id == "wifi" && event.value) {
+    this.wifiSpinner.spinning = true;
+    this.controller.modelChanged(this.wifiSpinner, this);   
+  }
 
   if (event.value) 
     this.addInterface(event.target.id);
