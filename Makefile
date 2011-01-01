@@ -1,7 +1,12 @@
 export APP_ID=$(shell grep id appinfo.json | cut -d\" -f4)
 VERSION=$(shell grep version appinfo.json | cut -d\" -f4)
-META_VERSION=1
-IPKG=${APP_ID}_${VERSION}-${META_VERSION}_arm.ipk
+META_VERSION=
+ifeq ($(META_VERSION),)
+IPKG_VER=${VERSION}
+else
+IPKG_VER=${VERSION}-${META_VERSION}
+endif
+IPKG=${APP_ID}_${IPKG_VER}_arm.ipk
 
 .PHONY: install run clobber clean
 
@@ -23,13 +28,13 @@ ${IPKG}: service build/arm/CONTROL/control
 	mkdir -p build/arm/usr/palm/applications/${APP_ID}/bin
 	install -m 755 src/freetether build/arm/usr/palm/applications/${APP_ID}/bin/${APP_ID}
 	( cd build; TAR_OPTIONS="--wildcards --mode=g-s" ipkg-build -o 0 -g 0 -p arm )
-	mv build/${APP_ID}_${VERSION}-${META_VERSION}_arm.ipk .
+	mv build/${IPKG} .
 
 build/%/CONTROL/control:
 	mkdir -p build/arm/CONTROL
 	rm -f $@
 	@echo "Package: ${APP_ID}" > $@
-	@echo "Version: ${VERSION}-${META_VERSION}" >> $@
+	@echo "Version: ${IPKG_VER}" >> $@
 	@echo "Architecture: arm" >> $@
 	@echo "Maintainer: Ryan Hope <rmh3093@gmail.com>, Eric Gaudet <emoney_33@yahoo.com>" >> $@
 	@echo "Description: freeTether" >> $@
