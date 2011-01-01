@@ -215,16 +215,14 @@ MainAssistant.prototype.setup = function() {
   this.getUSBSubscription = this.service.getUSB({subscribe: true}, this.updateUSB.bind(this));
   this.btProfileSubscription = this.service.getPrefs({keys:['btprofiledisable'], subscribe: true}, this.updateBTProfile.bind(this));
 	
-	if (this.prefs.security == 'Open')
-    this.passphraseRow.style.display = 'none';
+	this.updateSecurityWidgets();
 };
 
 MainAssistant.prototype.usbChanged = function(event) {
   this.service.setUSB({'state':event.value});
 }
 
-MainAssistant.prototype.securityChanged = function(event) {
-  this.cookie.put(this.prefs);
+MainAssistant.prototype.updateSecurityWidgets = function() {
   if (this.prefs.security == 'Open') {
     this.passphraseRow.style.display = 'none';
     this.securityRow.className = 'palm-row last';
@@ -232,6 +230,11 @@ MainAssistant.prototype.securityChanged = function(event) {
     this.passphraseRow.style.display = '';
     this.securityRow.className = 'palm-row';
   }
+}
+
+MainAssistant.prototype.securityChanged = function(event) {
+  this.cookie.put(this.prefs);
+  this.updateSecurityWidgets();
 }
 
 MainAssistant.prototype.textChanged = function(event) {
