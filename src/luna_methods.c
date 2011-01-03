@@ -1037,6 +1037,7 @@ bool bt_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
         link_state = DOWN;
 
       pthread_mutex_lock(&iface->mutex);
+      iface->iface_state = CREATED;
       iface->link_state = link_state;
       iface->ifname = strdup(ifname);
       pthread_mutex_unlock(&iface->mutex);
