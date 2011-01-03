@@ -942,6 +942,7 @@ struct interface *request_interface(char *type, char *ifname, struct wifi_ap *ap
   }
 
   free(payload);
+  sysinfo_response();
   return iface;
 }
 
@@ -1115,6 +1116,7 @@ bool interfaceAdd(LSHandle *sh, LSMessage *msg, void *ctx) {
         disable_wifi_callback, (void*)ap, NULL, &lserror);
   }
   else if (!strcmp(type, "bluetooth")) {
+    syslog(LOG_DEBUG, "btmonitor sub %d", btmonitor.subscribed);
     struct interface *iface = request_interface("bluetooth", NULL, NULL);
     if (!btmonitor.subscribed)
       LS_PRIV_SUBSCRIBE("btmonitor/monitor/subscribenotifications", btmonitor, (void *)iface);
