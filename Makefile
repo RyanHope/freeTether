@@ -56,6 +56,6 @@ put-svc:
 
 clobber:
 	$(MAKE) -C src clobber
-	rm -rf build ${IPKG}
+	rm -rf build *.ipk
 
 clean: clobber
