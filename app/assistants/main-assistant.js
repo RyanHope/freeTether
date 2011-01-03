@@ -391,22 +391,28 @@ MainAssistant.prototype.handleSysInfo = function(payload) {
     return;
     
   var i = 0;
-  while (payload.sysInfo.interfaces[i]) {
-    ipState = payload.sysInfo.stateIPv4;
-    dhcpState = payload.sysInfo.stateDHCPServer;
-    ifType = payload.sysInfo.interfaces[i].type;
-    ifState = payload.sysInfo.interfaces[i].stateInterface;
-    brState = payload.sysInfo.interfaces[i].stateInterfaceBridged;
-    if (ifState == 'CREATED' && brState == 'BRIDGED' && ipState == 'ASSIGNED' && dhcpState == 'STARTED') {
-      this.ifSpinner[ifType].spinning = false;
-    } else if (ifState == 'DESTROYED' && brState == 'UNBRIDGED') {
-      this.ifSpinner[ifType].spinning = false;
-    } else {
-      this.ifSpinner[ifType].spinning = true;
+  var len = payload.sysInfo.interfaces[i].length;
+  if (len>0) {
+    for (;i<len;i++) {
+      ipState = payload.sysInfo.stateIPv4;
+      dhcpState = payload.sysInfo.stateDHCPServer;
+      ifType = payload.sysInfo.interfaces[i].type;
+      ifState = payload.sysInfo.interfaces[i].stateInterface;
+      brState = payload.sysInfo.interfaces[i].stateInterfaceBridged;
+      if (ifState == 'CREATED' && brState == 'BRIDGED' && ipState == 'ASSIGNED' && dhcpState == 'STARTED') {
+        this.ifSpinner[ifType].spinning = false;
+      } else if (ifState == 'DESTROYED' && brState == 'UNBRIDGED') {
+        this.ifSpinner[ifType].spinning = false;
+      } else {
+        this.ifSpinner[ifType].spinning = true;
+      }
+      this.controller.modelChanged(this.ifSpinner[ifType], this);
     }
-    this.controller.modelChanged(this.ifSpinner[ifType], this);
-    //this.activeInterfaces.push(Object.clone(payload.sysInfo.interfaces[i++]));
-    i++;
+  } else {
+    for (ifType in ['wifi','bluetooth','usb']) {
+      this.ifSpinner[ifType].spinning = false;
+      this.controller.modelChanged(this.ifSpinner[ifType], this);
+    }
   }
 
 }
