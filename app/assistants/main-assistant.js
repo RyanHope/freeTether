@@ -1,3 +1,25 @@
+function objectToString(o) {
+  var parse = function(_o) {
+    var a = [], t;
+    for(var p in _o) {
+      if(_o.hasOwnProperty(p)) {
+        t = _o[p];
+        if(t && typeof t == "object") {
+          a[a.length]= p + ":{ " + arguments.callee(t).join(", ") + "}";
+        } else {
+          if(typeof t == "string"){
+            a[a.length] = [ p+ ": \"" + t.toString() + "\"" ];
+          } else {
+            a[a.length] = [ p+ ": " + t.toString()];
+          }        
+        }
+      }
+    }
+    return a;
+  }
+  return "{" + parse(o).join(", ") + "}";  
+}
+
 function MainAssistant() {
 
   this.DEFAULT_NETWORK = 'freeTether';
@@ -139,9 +161,9 @@ MainAssistant.prototype.setup = function() {
 	this.controller.setupWidget(
 		'wifi',
 		{
-  			trueLabel:  'On',
- 			falseLabel: 'Off',
-  			fieldName:  'value'
+      trueLabel:  'On',
+      falseLabel: 'Off',
+      fieldName:  'value'
 		},
 		this.wifiToggle
 	);
@@ -149,9 +171,9 @@ MainAssistant.prototype.setup = function() {
 	this.controller.setupWidget(
 		'bluetooth',
 		{
-  			trueLabel:  'On',
- 			falseLabel: 'Off',
-  			fieldName:  'value'
+      trueLabel:  'On',
+      falseLabel: 'Off',
+      fieldName:  'value'
 		},
 		this.btToggle
 	);
@@ -159,9 +181,9 @@ MainAssistant.prototype.setup = function() {
 	this.controller.setupWidget(
 		'usb',
 		{
-  			trueLabel:  'On',
- 			falseLabel: 'Off',
-  			fieldName:  'value'
+      trueLabel:  'On',
+      falseLabel: 'Off',
+      fieldName:  'value'
 		},
 		this.usbToggle
 	);
@@ -362,7 +384,7 @@ MainAssistant.prototype.handleSysInfo = function(payload) {
   if (!payload || !payload.sysInfo)
     return;
 
-  var i = 0;
+  /*var i = 0;
   this.activeInterfaces = [];
 	this.wifiToggle.value = false;
 	this.usbToggle.value = false;
@@ -395,7 +417,7 @@ MainAssistant.prototype.handleSysInfo = function(payload) {
 	 this.controller.modelChanged(this.btToggle, this);
 	 this.controller.modelChanged(this.wifiSpinner, this);
    this.controller.modelChanged(this.usbSpinner, this);
-   this.controller.modelChanged(this.btSpinner, this);
+   this.controller.modelChanged(this.btSpinner, this);*/
 }
 
 MainAssistant.prototype.handleCommand = function(event) {
@@ -456,6 +478,10 @@ MainAssistant.prototype.addInterface = function(type) {
       payload[type].ifname = this.USB_IFNAME;
       break;
   }
+  
+  Mojo.Log.error("!!!!!!!!!!!!!!!!!!!!!!!ADD!!!!!!!!!!!!!!!!!!!!!!!!!!");
+  Mojo.Log.error(objectToString(payload));
+  Mojo.Log.error("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
 
   this.service.addInterface(payload);
 }
@@ -472,6 +498,10 @@ MainAssistant.prototype.removeInterface = function(type) {
         payload[type].SSID = iface.SSID;
       if (iface.ifname)
         payload[type].ifname = iface.ifname;
+        
+      Mojo.Log.error("!!!!!!!!!!!!!!!!!!!!!!!ADD!!!!!!!!!!!!!!!!!!!!!!!!!!");
+      Mojo.Log.error(objectToString(payload));
+      Mojo.Log.error("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
 
       this.service.removeInterface(payload);
     }
@@ -479,12 +509,16 @@ MainAssistant.prototype.removeInterface = function(type) {
 }
 
 MainAssistant.prototype.toggleChanged = function(event) {
-	this.prefs[event.target.id] = event.value;
-	this.cookie.put(this.prefs);
 
-  if (event.target.id == "wifi" && event.value) {
+  if (event.target.id == "wifi") {
     this.wifiSpinner.spinning = true;
     this.controller.modelChanged(this.wifiSpinner, this);   
+  } else if (event.target.id == "bluetooth") {
+    this.btSpinner.spinning = true;
+    this.controller.modelChanged(this.btSpinner, this);   
+  } else if (event.target.id == "usb") {
+    this.usbSpinner.spinning = true;
+    this.controller.modelChanged(this.usbSpinner, this);   
   }
 
   if (event.value) 

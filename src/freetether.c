@@ -36,6 +36,7 @@ void cleanup() {
   ip_forward_cleanup();
   if (is_mounted("/usr/bin/mobilehotspotd")==1)
     umount("/usr/bin/mobilehotspotd");
+  system("brctl delbr bridge0");
 }
 
 void sighandler(int sig) {
