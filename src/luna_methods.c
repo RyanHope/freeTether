@@ -507,7 +507,7 @@ bool lease_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
     ifaceInfo.dhcp_state = STOPPED;
   }
 
-  sysinfo_response();
+  //sysinfo_response();
   return true;
 }
 
@@ -526,9 +526,9 @@ bool remove_netif_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
     if (ifaceInfo.ip_state == REMOVE_REQUESTED)
       ifaceInfo.ip_state = REMOVED;
     pthread_mutex_unlock(&ifaceInfo.mutex);
+    sysinfo_response();
   }
 
-  sysinfo_response();
   return true;
 }
 
@@ -562,12 +562,12 @@ bool dhcp_final_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
 
       free(payload);
     }
+    sysinfo_response();
   }
   else {
     /* Fix the handling of return false everywhere */
   }
 
-  sysinfo_response();
   return true;
 }
 
@@ -582,9 +582,10 @@ bool dhcp_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
 
     if (!dhcp_lease.subscribed)
       LS_PRIV_SUBSCRIBE("dhcp/server/leaseInformation", dhcp_lease, NULL);
+
+    sysinfo_response();
   }
 
-  sysinfo_response();
   return true;
 }
 
@@ -718,6 +719,7 @@ bool iface_status_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
         iface->bridge_state = UNBRIDGED;
 
       update_clients(iface, json_find_first_label(object, "clientList"));
+      sysinfo_response();
     }
   }
   else {
@@ -725,7 +727,6 @@ bool iface_status_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
     interface_status.subscribed = false;
   }
 
-  sysinfo_response();
   return true;
 }
 
@@ -794,7 +795,7 @@ bool delete_ap_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
         NULL, NULL, NULL, &lserror);
   }
 
-  sysinfo_response();
+  //sysinfo_response();
   return true;
 }
 
@@ -820,13 +821,13 @@ bool create_ap_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
       pthread_mutex_unlock(&ifaceInfo.ifaces[0].mutex);
       if (!interface_status.subscribed)
         LS_PRIV_SUBSCRIBE("wifi/interfaceStatus", interface_status, ctx);
+      sysinfo_response();
     }
   }
   else {
     remove_iface(iface);
   }
 
-  sysinfo_response();
   return true;
 }
 
@@ -1047,6 +1048,7 @@ bool bt_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
         iface->bridge_state = UNBRIDGED;
 
       update_clients(iface, json_find_first_label(object, "clientList"));
+      sysinfo_response();
     }
   }
   else {
@@ -1055,7 +1057,6 @@ bool bt_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
     remove_iface(iface);
   }
 
-  sysinfo_response();
   return true;
 }
 
