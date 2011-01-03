@@ -51,14 +51,18 @@ function MainAssistant() {
   
   this.usbModel = {value: 0};  
   this.panModel = {value: false};
-	
-  this.wifiToggle = {value: false};
-  this.btToggle = {value: false};
-  this.usbToggle = {value: false};
-	
-	this.wifiSpinner = {spinning: false};
-  this.btSpinner = {spinning: false};
-  this.usbSpinner = {spinning: false};
+  
+  this.ifToggle = {
+    wifi: {value: false},
+    bluetooth: {value: false},
+    usb: {value: false}
+  }
+  
+  this.ifSpinner = {
+    wifi: {spinning: false},
+    bluetooth: {spinning: false},
+    usb: {spinning: false}
+  }
 	
   this.clientListModel = {items: [], "listTitle": $L("Connected Devices")};
 
@@ -165,7 +169,7 @@ MainAssistant.prototype.setup = function() {
       falseLabel: 'Off',
       fieldName:  'value'
 		},
-		this.wifiToggle
+		this.ifToggle.wifi
 	);
 
 	this.controller.setupWidget(
@@ -175,7 +179,7 @@ MainAssistant.prototype.setup = function() {
       falseLabel: 'Off',
       fieldName:  'value'
 		},
-		this.btToggle
+		this.ifToggle.bluetooth
 	);
 	
 	this.controller.setupWidget(
@@ -185,7 +189,7 @@ MainAssistant.prototype.setup = function() {
       falseLabel: 'Off',
       fieldName:  'value'
 		},
-		this.usbToggle
+		this.ifToggle.usb
 	);
 	
 	this.controller.setupWidget(
@@ -244,9 +248,11 @@ MainAssistant.prototype.setup = function() {
   this.getUSBSubscription = this.service.getUSB({subscribe: true}, this.updateUSB.bind(this));
   this.btProfileSubscription = this.service.getPrefs({keys:['btprofiledisable'], subscribe: true}, this.updateBTProfile.bind(this));
 	
-	this.controller.setupWidget('wifiSpinner', {}, this.wifiSpinner);
-	this.controller.setupWidget('btSpinner', {}, this.btSpinner);
-	this.controller.setupWidget('usbSpinner', {}, this.usbSpinner);
+	this.controller.setupWidget('wifiSpinner', {}, this.ifSpinner.wifi);
+	this.controller.setupWidget('btSpinner', {}, this.ifSpinner.bluetooth);
+	this.controller.setupWidget('usbSpinner', {}, this.ifSpinner.usb);
+	
+  
 	
 	this.updateSecurityWidgets();
 };
@@ -383,41 +389,26 @@ MainAssistant.prototype.handleSysInfo = function(payload) {
 
   if (!payload || !payload.sysInfo)
     return;
+    
+  var i = 0;
+  while (payload.sysInfo.interfaces[i]) {
+    ipState = payload.sysInfo.stateIPv4;
+    dhcpState = payload.sysInfo.stateDHCPServer;
+    ifType = payload.sysInfo.interfaces[i].type;
+    ifState = payload.sysInfo.interfaces[i].stateInterface;
+    brState = payload.sysInfo.interfaces[i].stateInterfaceBridged;
+    if (ifState == 'CREATED' && brState == 'BRIDGED' && ipState == 'ASSIGNED' && dhcpState == 'STARTED') {
+      this.ifSpinner[ifType].spinning = false;
+    } else if (ifState == 'DESTROYED' && brState == 'UNBRIDGED') {
+      this.ifSpinner[ifType].spinning = false;
+    } else {
+      this.ifSpinner[ifType].spinning = true;
+    }
+    this.controller.modelChanged(this.ifSpinner[ifType], this);
+    //this.activeInterfaces.push(Object.clone(payload.sysInfo.interfaces[i++]));
+    i++;
+  }
 
-  /*var i = 0;
-  this.activeInterfaces = [];
-	this.wifiToggle.value = false;
-	this.usbToggle.value = false;
-	this.btToggle.value = false;
-   while (payload.sysInfo.interfaces[i]) {
-	 	 switch (payload.sysInfo.interfaces[i].ifname) {
-		 	case this.WIFI_IFNAME:
-		 		this.wifiToggle.value = true;
-		 		if (payload.sysInfo.stateIPv4 == "ASSIGNED" &&
-		 		payload.sysInfo.stateDHCPServer == "STARTED" &&
-		 		payload.sysInfo.interfaces[i].stateInterfaceBridged == "BRIDGED" &&
-		 		payload.sysInfo.interfaces[i].stateLink == "UP") {
-          this.wifiSpinner.spinning = false;
-		 		}
-		 		else {
-		 			this.wifiSpinner.spinning = true;
-		 		}
-			 break;
-		 case this.USB_IFNAME:
-       this.usbToggle.value = false;
-       break;
-		 case this.BT_IFNAME:
-       this.btToggle.value = false;
-       break;
-		 }
-     this.activeInterfaces.push(Object.clone(payload.sysInfo.interfaces[i++]));
-   }
-	 this.controller.modelChanged(this.wifiToggle, this);
-	 this.controller.modelChanged(this.usbToggle, this);
-	 this.controller.modelChanged(this.btToggle, this);
-	 this.controller.modelChanged(this.wifiSpinner, this);
-   this.controller.modelChanged(this.usbSpinner, this);
-   this.controller.modelChanged(this.btSpinner, this);*/
 }
 
 MainAssistant.prototype.handleCommand = function(event) {
@@ -487,39 +478,29 @@ MainAssistant.prototype.addInterface = function(type) {
 }
 
 MainAssistant.prototype.removeInterface = function(type) {
-  var iface = {};
-  for (var i=0; i<this.activeInterfaces.length; i++) {
-    iface = this.activeInterfaces[i];
-    if (iface.type.toLowerCase() === type) {
-      var payload = {};
-      payload[type] = {};
+  var payload = {};
+  payload[type] = {};
 
-      if (iface.SSID)
-        payload[type].SSID = iface.SSID;
-      if (iface.ifname)
-        payload[type].ifname = iface.ifname;
-        
-      Mojo.Log.error("!!!!!!!!!!!!!!!!!!!!!!!ADD!!!!!!!!!!!!!!!!!!!!!!!!!!");
-      Mojo.Log.error(objectToString(payload));
-      Mojo.Log.error("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
-
-      this.service.removeInterface(payload);
-    }
+  switch(type) {
+    case 'wifi':
+      payload[type].ifname = this.WIFI_IFNAME;
+      break;
+    case 'bluetooth':
+      payload[type].ifname = this.BT_IFNAME;
+      break;
+    case 'usb':
+      payload[type].ifname = this.USB_IFNAME;
+      break;
   }
+  
+  Mojo.Log.error("!!!!!!!!!!!!!!!!!!!!REMOVE!!!!!!!!!!!!!!!!!!!!!!!!!!");
+  Mojo.Log.error(objectToString(payload));
+  Mojo.Log.error("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+
+  this.service.removeInterface(payload);
 }
 
 MainAssistant.prototype.toggleChanged = function(event) {
-
-  if (event.target.id == "wifi") {
-    this.wifiSpinner.spinning = true;
-    this.controller.modelChanged(this.wifiSpinner, this);   
-  } else if (event.target.id == "bluetooth") {
-    this.btSpinner.spinning = true;
-    this.controller.modelChanged(this.btSpinner, this);   
-  } else if (event.target.id == "usb") {
-    this.usbSpinner.spinning = true;
-    this.controller.modelChanged(this.usbSpinner, this);   
-  }
 
   if (event.value) 
     this.addInterface(event.target.id);
