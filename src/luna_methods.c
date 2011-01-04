@@ -969,10 +969,14 @@ bool btmon_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
     if ((radio && !strcmp(radio, "turningon")) ||
        (notification && !strcmp(notification, "notifnradioturningon"))) {
       iface = request_interface("bluetooth", NULL, NULL);
+      syslog(LOG_DEBUG, "interface requested %p", iface);
     }
     if (!bluetooth.subscribed && 
         ((radio && !strcmp(radio, "on")) ||
          (notification && !strcmp(notification, "notifnradioon")))) {
+      syslog(LOG_DEBUG, "radio on iface %p", iface);
+      if (!iface)
+        iface = request_interface("bluetooth", NULL, NULL);
       LS_PRIV_SUBSCRIBE("bluetooth/pan/subscribenotifications", bluetooth, (struct interface *)iface);
     }
     if ((radio && !strcmp(radio, "turningoff")) ||
@@ -986,6 +990,7 @@ bool btmon_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
       LS_SUB_CANCEL(bluetooth);
       //LS_SUB_CANCEL(btmonitor);
       remove_iface(iface);
+      iface = NULL;
       sysinfo_response();
     }
   }
@@ -1060,7 +1065,7 @@ bool bt_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
     json_get_string(object, "ifname", &ifname);
     json_get_string(object, "status", &status);
 
-    syslog(LOG_DEBUG, "ifname %s, status %s", ifname, status);
+    syslog(LOG_DEBUG, "ifname %s, status %s, iface %p", ifname, status, iface);
     if (ifname && status) {
       pthread_mutex_lock(&iface->mutex);
       iface->iface_state = CREATED;
