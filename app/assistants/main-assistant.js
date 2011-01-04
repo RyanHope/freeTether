@@ -337,12 +337,16 @@ MainAssistant.prototype.handleSysInfo = function(payload) {
       ifState = payload.sysInfo.interfaces[i].stateInterface;
       if (ifState == 'CREATE REQUESTED' || ifState == 'DESTROY REQUESTED')
         this.ifSpinner[ifType].spinning = true;
-      
+      else if (ifState == 'CREATED')
+        this.ifToggle[ifType].value = true;
+      else if (ifState == 'DESTROYED')
+        this.ifToggle[ifType].value = false;
     }
   }
   
   ['wifi','bluetooth','usb'].each(function(ifType){
     this.controller.modelChanged(this.ifSpinner[ifType], this);
+    this.controller.modelChanged(this.ifToggle[ifType], this);
   }, this);
 
 }
