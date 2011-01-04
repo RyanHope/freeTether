@@ -13,8 +13,10 @@
 #define BUF_SIZE (32*(sizeof(struct inotify_event)+16))
 
 int monitor_ip_forward;
+char *tmpDir;
 char *tmpProc;
 char *tmp_ip_forward;
+char *fake_ip_forward;
 
 void ip_forward_cleanup() {
   monitor_ip_forward = 0;
@@ -165,11 +167,20 @@ void *ipmon_thread(void *ptr) {
 void setup_fake_proc() {
 
   char template[] = "/tmp/freeTether.XXXXXX";
-  tmpProc = strdup(mkdtemp(template));
+  tmpDir = strdup(mkdtemp(template));
 
-  asprintf(&tmp_ip_forward,"%s/sys/net/ipv4/ip_forward", tmpProc);
+  asprintf(&tmpProc,"%s/proc", tmpDir);
+  mkdir(tmpProc);
 
-  mount("/dev/null", IP_FORWARD, NULL, MS_BIND, NULL);
+  FILE *fp;
+  asprintf(&fake_ip_forward,"%s/ip_forward", tmpDir);
+  fp = fopen(fake_ip_forward, "w");
+  fprintf(fp, "0\n");
+  fclose(fp);
+
+  asprintf(&tmp_ip_forward,"%s%s", tmpProc, IP_FORWARD);
+
+  mount(fake_ip_forward, IP_FORWARD, NULL, MS_BIND, NULL);
   mount("proc", tmpProc, "proc", 0, NULL);
 
 }
@@ -179,9 +190,13 @@ void cleanup_fake_proc() {
   umount(tmpProc);
   umount(IP_FORWARD);
 
-  free(tmp_ip_forward);
-
   rmdir(tmpProc);
+  remove(fake_ip_forward);
+  rmdir(tmpDir);
+
+  free(fake_ip_forward);
+  free(tmp_ip_forward);
   free(tmpProc);
+  free(tmpDir);
 
 }
