@@ -389,11 +389,17 @@ MainAssistant.prototype.handleSysInfo = function(payload) {
 
   if (!payload || !payload.sysInfo)
     return;
-    
+ 
+  var len = payload.sysInfo.interfaces.length;
   var i = 0;
-  var len = payload.sysInfo.interfaces[i].length;
-  if (len>0) {
-    for (;i<len;i++) {
+  
+  if (len == 0) {
+    ['wifi','bluetooth','usb'].each(function(ifType){
+      this.ifSpinner[ifType].spinning = false;
+      this.controller.modelChanged(this.ifSpinner[ifType], this);
+    }, this);
+  } else {
+    for (; i<len; i++) {
       ipState = payload.sysInfo.stateIPv4;
       dhcpState = payload.sysInfo.stateDHCPServer;
       ifType = payload.sysInfo.interfaces[i].type;
@@ -406,11 +412,6 @@ MainAssistant.prototype.handleSysInfo = function(payload) {
       } else {
         this.ifSpinner[ifType].spinning = true;
       }
-      this.controller.modelChanged(this.ifSpinner[ifType], this);
-    }
-  } else {
-    for (ifType in ['wifi','bluetooth','usb']) {
-      this.ifSpinner[ifType].spinning = false;
       this.controller.modelChanged(this.ifSpinner[ifType], this);
     }
   }
@@ -476,10 +477,6 @@ MainAssistant.prototype.addInterface = function(type) {
       break;
   }
   
-  Mojo.Log.error("!!!!!!!!!!!!!!!!!!!!!!!ADD!!!!!!!!!!!!!!!!!!!!!!!!!!");
-  Mojo.Log.error(objectToString(payload));
-  Mojo.Log.error("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
-
   this.service.addInterface(payload);
 }
 
@@ -498,10 +495,6 @@ MainAssistant.prototype.removeInterface = function(type) {
       payload[type].ifname = this.USB_IFNAME;
       break;
   }
-  
-  Mojo.Log.error("!!!!!!!!!!!!!!!!!!!!REMOVE!!!!!!!!!!!!!!!!!!!!!!!!!!");
-  Mojo.Log.error(objectToString(payload));
-  Mojo.Log.error("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
 
   this.service.removeInterface(payload);
 }
