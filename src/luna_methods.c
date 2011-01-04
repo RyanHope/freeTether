@@ -956,6 +956,7 @@ bool btmon_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
   object = json_parse_document(LSMessageGetPayload(msg));
   json_get_bool(object, "returnValue", &returnValue);
 
+  syslog(LOG_DEBUG, "btmon callback returnValue %d", returnValue);
   // returnValue isn't passed in subsequent subcription messages, not sure how else to 
   // distinguish non-existant from existant but false
   if (!json_find_first_label(object, "returnValue"))
@@ -967,7 +968,9 @@ bool btmon_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
     if (is_subscription(msg))
       btmonitor.subscribed = true;
 
+    syslog(LOG_DEBUG, "bluetooth sub %d", bluetooth.subscribed);
     json_get_string(object, "radio", &radio);
+    syslog(LOG_DEBUG, "radio %s", radio);
     if (radio && !strcmp(radio, "on") && !bluetooth.subscribed) {
       LS_PRIV_SUBSCRIBE("bluetooth/pan/subscribenotifications", bluetooth, ctx);
     }
@@ -975,6 +978,7 @@ bool btmon_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
       char *notification;
 
       json_get_string(object, "notification", &notification);
+      syslog(LOG_DEBUG, "notifications %s", radio);
       if (notification && !strcmp(notification, "notifnradioon") && !bluetooth.subscribed)
         LS_PRIV_SUBSCRIBE("bluetooth/pan/subscribenotifications", bluetooth, ctx);
     }
@@ -1023,6 +1027,7 @@ bool bt_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
   object = json_parse_document(LSMessageGetPayload(msg));
   json_get_bool(object, "returnValue", &returnValue);
 
+  syslog(LOG_DEBUG, "bluetooth callback returnValue %d", returnValue);
   if (returnValue) {
     if (is_subscription(msg))
       bluetooth.subscribed = true;
@@ -1030,6 +1035,7 @@ bool bt_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
     json_get_string(object, "ifname", &ifname);
     json_get_string(object, "status", &status);
 
+    syslog(LOG_DEBUG, "ifname %s, status %s", ifname, status);
     if (ifname && status) {
       if (!strcmp(status, "connected"))
         link_state = UP;
