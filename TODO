@@ -9,10 +9,6 @@ High Priority
 * Fix/Verify the tracking of all states and error conditions.
 * Use the structure values not hardcoded bridge0 and ip addresses.
 * Check into libnetbridge (currently returning funky values)
-* Make sure ip forwarding is solid (does work for USB too or will need to 
-  bring back mount trick?)
-* Fix remove interface to go through list of interfaces, don't just shutdown 
-  everything.
 * Fix the cleaning up and disconnecting states
 * LOTS of memory allocation, fine tooth comb for leaks!
 * Verify mutexes and put some around subscribe globals
@@ -33,14 +29,11 @@ High Priority
 
 Medium Priority
 ===============
-* Move prefs to a menu
 * ADD client info scene on tap of client from client list
+* dash/notifications
+* Add prefs menu with alternate access to interface prefs
+* Add way to bridge IP and dhcp range
 
 Low Priority
 ============
-* Fix icons on toggle page
-* Add fade to bottom
-* Improve snap to top behavior
-* Spinner for turning on interface, at least wifi
 * WebOS 2.0 - exhibition, just type, activity etc...
-* dash/notifications
