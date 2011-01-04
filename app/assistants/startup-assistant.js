@@ -14,7 +14,8 @@ function StartupAssistant(changelog)
 			version: '1.0.0',
 			log:
 			[
-				'Lots of shit',
+				'USB, Bluetooth and WiFi support',
+				'1.4.5 and 2.x.x support'
 			]
 		},
 	];
