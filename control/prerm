@@ -25,4 +25,7 @@ rm -f /var/palm/system-ervices/${PID}.service
 rm -f /var/palm/ls2/roles/pub/${PID}.json
 rm -f /var/palm/ls2/roles/prv/${PID}.json
 
+# Run some cleanup
+/bin/sh -e ${APPS}/usr/palm/applications/${PID}/scripts/cleanup.sh
+
 exit 0

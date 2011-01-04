@@ -75,6 +75,7 @@ int get_pid_by_name(const char* name) {
     syslog(LOG_ERR, "error[opendir] in get_pid_by_name()");
     pid = -1;
   }
+  syslog(LOG_DEBUG, "get pid by name %s - %d", name, pid);
   return pid;
 }
 
@@ -106,7 +107,6 @@ int main(int argc, char **argv) {
   signal(SIGTERM, sighandler);
   signal(SIGQUIT, sighandler);
   signal(SIGHUP, sighandler);
-  signal(SIGKILL, sighandler);
 
   openlog(APP_ID, LOG_PID, LOG_USER);
 

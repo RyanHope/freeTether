@@ -38,6 +38,6 @@ if [ -d /var/palm/ls2/roles ]; then
 fi
 
 # Temporary Hack to get it to start
-luna-send -n 1 palm://org.webosinternals.freetether/version {}
+#luna-send -n 1 palm://org.webosinternals.freetether/version {}
 
 exit 0
