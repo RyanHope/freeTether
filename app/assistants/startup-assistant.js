@@ -15,7 +15,8 @@ function StartupAssistant(changelog)
 			log:
 			[
 				'USB, Bluetooth and WiFi support',
-				'1.4.5 and 2.x.x support'
+				'1.4.5 and 2.x.x support',
+				'Improved UI'
 			]
 		},
 	];
