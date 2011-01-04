@@ -32,24 +32,7 @@ function MainAssistant() {
   this.service = new FreeTetherService();
 	this.prefs = this.cookie.get();
   this.statusSubscription = null;
-  
-  this.securityModel =
-  {
-    value: this.prefs.security,
-    choices: []
-  };
-  
-  this.usbChoices = [
-    {label:$L('UMS'),                     value:1},
-    {label:$L('UMS + NOVACOM'),           value:2},
-    {label:$L('PASSTHRU'),                value:3},
-    {label:$L('USBNET + PASSTHRU'),       value:4},
-    {label:$L('USBNET + UMS + NOVACOM'),  value:5},
-  ];
-  if (Mojo.Environment.DeviceInfo.platformVersionMajor == 2)
-    this.usbChoices.push({label:$L('PASSTHRU + NOVACOM'),value:6})
-  
-  this.usbModel = {value: 0};  
+    
   this.panModel = {value: false};
   
   this.ifToggle = {
@@ -66,8 +49,6 @@ function MainAssistant() {
 	
   this.clientListModel = {items: [], "listTitle": $L("Connected Devices")};
 
-  this.activeInterfaces = [];
-
 }
 
 MainAssistant.prototype.setup = function() {
@@ -83,74 +64,14 @@ MainAssistant.prototype.setup = function() {
 	this.options = this.controller.get('options');
 	this.options.style.display = 'none';
 	
-	this.network              = this.controller.get('network');
-	this.passphrase           = this.controller.get('passphrase');
-	this.security             = this.controller.get('security');
+	this.controller.listen('wifi-row', Mojo.Event.tap, this.ifaceRowTapped.bindAsEventListener(this, 'wifiPrefs'));
+	this.controller.listen('usb-row', Mojo.Event.tap, this.ifaceRowTapped.bindAsEventListener(this, 'usbPrefs'));
 	
-	this.securityRow         = this.controller.get('security-row');
-	this.passphraseRow       = this.controller.get('passphrase-row');
-	
-	this.usbGadget           = this.controller.get('usbGadget');
   this.panProfile          = this.controller.get('panProfile');
 
   this.clientList          = this.controller.get('clientList');
 	
-	this.securityChangedHandler  = this.securityChanged.bindAsEventListener(this);
-	this.usbChangedHandler       = this.usbChanged.bindAsEventListener(this);
 	this.textChanged             = this.textChanged.bindAsEventListener(this);
-	
-  this.controller.setupWidget(
-    'network',
-    {
-      multiline: false,
-      enterSubmits: false,
-      hintText: 'Required',
-      modelProperty: 'network',
-      textCase: Mojo.Widget.steModeLowerCase,
-      focusMode: Mojo.Widget.focusSelectMode
-    },
-    this.prefs
-  );
-  Mojo.Event.listen(this.network,      Mojo.Event.propertyChange,  this.textChanged);
-  
-  this.controller.setupWidget(
-    'security',
-    {
-      label: 'Security',
-      choices:
-        [
-          {label:'Open', value:'Open'},
-          {label:'WPA/WPA2 Personal', value:'wpa'},
-        ],
-        modelProperty: 'security'
-      },
-      this.prefs
-    );
-    this.controller.listen('security', Mojo.Event.propertyChange, this.securityChangedHandler);
-  
-  this.controller.setupWidget(
-    'passphrase',
-    {
-      multiline: false,
-      enterSubmits: false,
-      modelProperty: 'passphrase',
-      textCase: Mojo.Widget.steModeLowerCase,
-      focusMode: Mojo.Widget.focusSelectMode
-    },
-    this.prefs
-  );
-  Mojo.Event.listen(this.passphrase,      Mojo.Event.propertyChange,  this.textChanged);
-  
-  this.controller.setupWidget(
-    'usbGadget',
-    {
-      label: '',
-      choices: this.usbChoices,
-      modelProperty: 'value',
-      },
-      this.usbModel
-    );
-    this.controller.listen('usbGadget', Mojo.Event.propertyChange, this.usbChangedHandler);
     
   this.controller.setupWidget(
     'panProfile',
@@ -222,7 +143,6 @@ MainAssistant.prototype.setup = function() {
 				items:[
 					{label:$L('Toggles'), icon:'icon-switch', command:'toggles'},
 					{label:$L('Connections'), icon:'icon-connections', command:'connections'}, 
-					{label:$L('Options'), icon:'icon-prefs', command:'options'}
 				]},
 				{},
 			]
@@ -245,7 +165,6 @@ MainAssistant.prototype.setup = function() {
   this.serviceStatusSubscription = this.service.monitorServer("org.webosinternals.freetether", this.server.bind(this));
   this.sysInfoSubscription = this.service.getStatus({subscribe: true}, this.handleSysInfo.bind(this));
   this.clientListSubscription = this.service.getClientList({subscribe: true}, this.handleClientList.bind(this));
-  this.getUSBSubscription = this.service.getUSB({subscribe: true}, this.updateUSB.bind(this));
   this.btProfileSubscription = this.service.getPrefs({keys:['btprofiledisable'], subscribe: true}, this.updateBTProfile.bind(this));
 	
 	this.controller.setupWidget('wifiSpinner', {}, this.ifSpinner.wifi);
@@ -255,27 +174,7 @@ MainAssistant.prototype.setup = function() {
   this.btGroup = this.controller.get('bt-group');
   this.btGroup.style.display = 'none';
 	
-	this.updateSecurityWidgets();
 };
-
-MainAssistant.prototype.usbChanged = function(event) {
-  this.service.setUSB({'state':event.value});
-}
-
-MainAssistant.prototype.updateSecurityWidgets = function() {
-  if (this.prefs.security == 'Open') {
-    this.passphraseRow.style.display = 'none';
-    this.securityRow.className = 'palm-row last';
-  } else {
-    this.passphraseRow.style.display = '';
-    this.securityRow.className = 'palm-row';
-  }
-}
-
-MainAssistant.prototype.securityChanged = function(event) {
-  this.cookie.put(this.prefs);
-  this.updateSecurityWidgets();
-}
 
 MainAssistant.prototype.textChanged = function(event) {
   this.cookie.put(this.prefs);
@@ -301,13 +200,6 @@ MainAssistant.prototype.updateBTProfile = function(payload) {
         this.panModel.value = false;
     }
     this.controller.modelChanged(this.panModel, this);
-  }
-}
-
-MainAssistant.prototype.updateUSB = function(payload) {
-  if (payload.returnValue) {
-    this.usbModel.value = payload.state;
-    this.controller.modelChanged(this.usbModel, this);
   }
 }
 
@@ -507,6 +399,12 @@ MainAssistant.prototype.toggleChanged = function(event) {
   else
     this.removeInterface(event.target.id);
 
+}
+
+MainAssistant.prototype.ifaceRowTapped = function(event, item) {
+
+  this.controller.stageController.pushScene(item);
+  
 }
 
 MainAssistant.prototype.activate = function(event) {

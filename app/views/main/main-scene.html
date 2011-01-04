@@ -14,7 +14,7 @@
 			
 			<div class="palm-list">
 			
-				<div class="palm-row first">
+				<div id="wifi-row" class="palm-row first">
 					<div class="palm-row-wrapper">
 						<div class="label left">Wireless</div>
 						<div id="wifi" x-mojo-element="ToggleButton"></div>
@@ -32,7 +32,7 @@
 					</div>
 				</div>
 				
-				<div class="palm-row last">
+				<div id="usb-row" class="palm-row last">
 					<div class="palm-row-wrapper">
 						<div class="label left">USB</div>
 						<div id="usb" x-mojo-element="ToggleButton"></div>
@@ -54,56 +54,6 @@
   
 
 	<div id="options">
-	
-	  <div class="palm-group">
-	  
-      <div class="palm-group-title">Wireless Prefs</div>
-      
-      <div class="palm-list">
-      
-        <div class="palm-row first">
-          <div class="palm-row-wrapper textfield-group" x-mojo-focus-highlight="true">
-            <div class="title">
-              <div class="label">Network</div>
-              <div id="network" x-mojo-element="TextField"></div>
-            </div>
-          </div>
-        </div>
-        
-        <div id="security-row" class="palm-row">
-          <div class="palm-row-wrapper">
-            <div id="security" x-mojo-element="ListSelector"></div>
-          </div>
-        </div>
-        
-        <div id="passphrase-row" class="palm-row last">
-          <div class="palm-row-wrapper textfield-group" x-mojo-focus-highlight="true">
-            <div class="title">
-              <div class="label">Passphrase</div>
-              <div id="passphrase" x-mojo-element="PasswordField"></div>
-            </div>
-          </div>
-        </div>
-        
-      </div>
-      
-    </div>
-    
-    <div class="palm-group">
-    
-      <div class="palm-group-title">USB Prefs</div>
-      
-      <div class="palm-list">
-      
-        <div class="palm-row single">
-          <div class="palm-row-wrapper">
-            <div id="usbGadget" x-mojo-element="ListSelector"></div>
-          </div>
-        </div>
-        
-      </div>
-      
-    </div>
     
     <div id="bt-group" class="palm-group">
     
