@@ -130,7 +130,7 @@ MainAssistant.prototype.setup = function() {
   );
 
 	this.controller.setupWidget(
-		Mojo.Menu.commandMenu,
+		Mojo.Menu.viewMenu,
 		{
 			menuClass: 'no-fade'
 		},
@@ -141,8 +141,8 @@ MainAssistant.prototype.setup = function() {
 				{label:$L('Views'), 
 				toggleCmd:'toggles',
 				items:[
-					{label:$L('Toggles'), icon:'icon-switch', command:'toggles'},
-					{label:$L('Connections'), icon:'icon-connections', command:'connections'}, 
+					{label:$L('Interfaces'), command:'toggles', width:160},
+					{label:$L('Connections'), command:'connections', width:160}, 
 				]},
 				{},
 			]
