@@ -89,6 +89,11 @@ int toggle_ip_forward_state() {
   syslog(LOG_DEBUG, "Tried to write state %d times, final ret %d\n", i, ret);
   fclose(fp);
 
+  if (state) 
+    system("iptables -t nat -I POSTROUTING -j MASQUERADE");
+  else
+    system("iptables -t nat --flush");
+
   return 0;
 }
 
