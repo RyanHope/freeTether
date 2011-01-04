@@ -935,22 +935,6 @@ struct interface *request_interface(char *type, char *ifname, struct wifi_ap *ap
 
   pthread_mutex_unlock(&iface->mutex);
 
-  if (!strcmp(type, "wifi")) {
-    asprintf(&payload, "{\"SSID\": \"%s\", \"Security\": \"%s\"", ap->ssid, ap->security);
-
-    if (ap->passphrase /* && not Open ? */)
-      asprintf(&payload, "%s, \"Passphrase\": %s", payload, ap->passphrase);
-
-    asprintf(&payload, "%s}", payload);
-
-    if (!payload)
-      return NULL;
-
-    LSCall(priv_serviceHandle, "palm://com.palm.wifi/createAP", payload, 
-        create_ap_callback, (void *)iface, NULL, &lserror);
-  }
-
-  free(payload);
   sysinfo_response();
   return iface;
 }
@@ -960,6 +944,7 @@ bool btmon_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
   LSErrorInit(&lserror);
   json_t *object;
   bool returnValue = false;
+  static struct interface *iface = NULL;
 
   object = json_parse_document(LSMessageGetPayload(msg));
   json_get_bool(object, "returnValue", &returnValue);
@@ -971,26 +956,38 @@ bool btmon_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
     returnValue = true;
 
   if (returnValue) {
-    char *radio;
+    char *radio = NULL;
+    char *notification = NULL;
 
     if (is_subscription(msg))
       btmonitor.subscribed = true;
 
     syslog(LOG_DEBUG, "bluetooth sub %d", bluetooth.subscribed);
     json_get_string(object, "radio", &radio);
-    syslog(LOG_DEBUG, "radio %s", radio);
-    if (radio && !strcmp(radio, "on") && !bluetooth.subscribed) {
-      LS_PRIV_SUBSCRIBE("bluetooth/pan/subscribenotifications", bluetooth, ctx);
+    json_get_string(object, "notification", &notification);
+    syslog(LOG_DEBUG, "radio %s, notification %s", radio, notification);
+    if ((radio && !strcmp(radio, "turningon")) ||
+       (notification && !strcmp(notification, "notifnradioturningon"))) {
+      iface = request_interface("bluetooth", NULL, NULL);
     }
-    else {
-      char *notification;
-
-      json_get_string(object, "notification", &notification);
-      syslog(LOG_DEBUG, "notifications %s", radio);
-      if (notification && !strcmp(notification, "notifnradioon") && !bluetooth.subscribed)
-        LS_PRIV_SUBSCRIBE("bluetooth/pan/subscribenotifications", bluetooth, ctx);
+    if (!bluetooth.subscribed && 
+        ((radio && !strcmp(radio, "on")) ||
+         (notification && !strcmp(notification, "notifnradioon")))) {
+      LS_PRIV_SUBSCRIBE("bluetooth/pan/subscribenotifications", bluetooth, (struct interface *)iface);
     }
-
+    if ((radio && !strcmp(radio, "turningoff")) ||
+       (notification && !strcmp(notification, "notifnradioturningoff"))) {
+      pthread_mutex_lock(&iface->mutex);
+      iface->iface_state = DESTROY_REQUESTED;
+      pthread_mutex_unlock(&iface->mutex);
+    }
+    if ((radio && !strcmp(radio, "off")) ||
+       (notification && !strcmp(notification, "notifnradiooff"))) {
+      LS_SUB_CANCEL(bluetooth);
+      //LS_SUB_CANCEL(btmonitor);
+      remove_iface(iface);
+      sysinfo_response();
+    }
   }
   else {
     // if (is_subscription(msg))
@@ -1015,8 +1012,29 @@ bool disable_wifi_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
     json_get_string(object, "errorText", &errorText);
 
   if (returnValue || (errorText && !strcmp(errorText, "AlreadyDisabled"))) {
+    char *payload = NULL;
+    struct interface *iface = NULL;
+
     ap = (struct wifi_ap *)ctx;
-    request_interface("wifi", NULL, ap);
+    iface = request_interface("wifi", NULL, ap);
+
+    if (!iface)
+      return false;
+
+    asprintf(&payload, "{\"SSID\": \"%s\", \"Security\": \"%s\"", ap->ssid, ap->security);
+
+    if (ap->passphrase /* && not Open ? */)
+      asprintf(&payload, "%s, \"Passphrase\": %s", payload, ap->passphrase);
+
+    asprintf(&payload, "%s}", payload);
+
+    if (!payload)
+      return false;
+
+    LSCall(priv_serviceHandle, "palm://com.palm.wifi/createAP", payload, 
+        create_ap_callback, (void *)iface, NULL, &lserror);
+
+    free(payload);
   }
   
   return true;
@@ -1029,7 +1047,6 @@ bool bt_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
   char *ifname = NULL;
   char *status = NULL;
   struct interface *iface = (struct interface *)ctx;
-  LINK_STATE link_state = UNKNOWN;
   json_t *object;
 
   object = json_parse_document(LSMessageGetPayload(msg));
@@ -1045,22 +1062,17 @@ bool bt_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
 
     syslog(LOG_DEBUG, "ifname %s, status %s", ifname, status);
     if (ifname && status) {
-      if (!strcmp(status, "connected"))
-        link_state = UP;
-      if (!strcmp(status, "disconnected"))
-        link_state = DOWN;
-
       pthread_mutex_lock(&iface->mutex);
       iface->iface_state = CREATED;
-      iface->link_state = link_state;
       iface->ifname = strdup(ifname);
       pthread_mutex_unlock(&iface->mutex);
 
-      if (link_state == UP && iface->bridge_state != BRIDGED)
+      if (iface->bridge_state != BRIDGED) {
+        pthread_mutex_lock(&iface->mutex);
+        iface->link_state = UP;
+        pthread_mutex_unlock(&iface->mutex);
         add_bridge(iface);
-
-      if (link_state == DOWN)
-        iface->bridge_state = UNBRIDGED;
+      }
 
       update_clients(iface, json_find_first_label(object, "clientList"));
       sysinfo_response();
@@ -1069,8 +1081,17 @@ bool bt_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
   else {
     // if (is_subscription(msg))
     bluetooth.subscribed = false;
-    remove_iface(iface);
   }
+
+  return true;
+}
+
+bool enable_bt_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
+  LSError lserror;
+  LSErrorInit(&lserror);
+
+  if (!btmonitor.subscribed)
+    LS_PRIV_SUBSCRIBE("btmonitor/monitor/subscribenotifications", btmonitor, NULL);
 
   return true;
 }
@@ -1132,10 +1153,16 @@ bool interfaceAdd(LSHandle *sh, LSMessage *msg, void *ctx) {
         disable_wifi_callback, (void*)ap, NULL, &lserror);
   }
   else if (!strcmp(type, "bluetooth")) {
+#if 0
+    struct interface *iface;
     syslog(LOG_DEBUG, "btmonitor sub %d", btmonitor.subscribed);
-    struct interface *iface = request_interface("bluetooth", NULL, NULL);
+    iface = request_interface("bluetooth", NULL, NULL);
     if (!btmonitor.subscribed)
       LS_PRIV_SUBSCRIBE("btmonitor/monitor/subscribenotifications", btmonitor, (void *)iface);
+#else
+    LSCall(priv_serviceHandle, "palm://com.palm.btmonitor/monitor/radioon", 
+        "{\"visible\":true, \"connectable\": true}", enable_bt_callback, NULL, NULL, &lserror);
+#endif
   }
   else if (!strcmp(type, "usb")) {
     // TODO: get the states working (or not) for usb
@@ -1239,6 +1266,13 @@ LSMethod luna_methods[] = {
 #endif
   { NULL, NULL},
 };
+
+void early_subscription() {
+  LSError lserror;
+  LSErrorInit(&lserror);
+
+  LS_PRIV_SUBSCRIBE("btmonitor/monitor/subscribenotifications", btmonitor, NULL);
+}
 
 bool register_methods(LSPalmService *serviceHandle, LSError lserror) {
 	return LSPalmServiceRegisterCategory(serviceHandle, "/", luna_methods,
