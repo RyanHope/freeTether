@@ -1,7 +1,7 @@
 #!/bin/sh
 
 umount /tmp/freetether/proc
-rm -rf /tmp/freetether/proc
+rm -rf /tmp/freetether
 umount /proc/sys/net/ipv4/ip_forward
 umount /usr/bin/mobilehotspotd
 luna-send -n 1 palm://com.palm.dhcp/interfaceFinalize '{"interface":"bridge0"}'
