@@ -252,7 +252,8 @@ MainAssistant.prototype.setup = function() {
 	this.controller.setupWidget('btSpinner', {}, this.ifSpinner.bluetooth);
 	this.controller.setupWidget('usbSpinner', {}, this.ifSpinner.usb);
 	
-  
+  this.btGroup = this.controller.get('bt-group');
+  this.btGroup.style.display = 'none';
 	
 	this.updateSecurityWidgets();
 };
