@@ -93,5 +93,16 @@ var FreeTetherService = Class.create({
 
     return request;
   },
+  
+  getIPForward: function(param, callback) {
+    var request = new Mojo.Service.Request(ServiceUri, {
+      method: 'get_ip_forward',
+      parameters: param,
+      onSuccess: callback,
+      onFailure: callback
+    });
+
+    return request;
+  },
 
 });

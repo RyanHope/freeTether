@@ -54,6 +54,9 @@ function MainAssistant() {
 MainAssistant.prototype.setup = function() {
 
 	this.controller.document.body.className = 'palm-dark';
+	
+	this.dhcpIcon = this.controller.get('dhcp-icon');
+	this.ipForwardIcon = this.controller.get('ip-forward-icon');
 
 	this.toggles = this.controller.get('toggles');
 	this.toggles.style.display = '';
@@ -166,6 +169,7 @@ MainAssistant.prototype.setup = function() {
   this.sysInfoSubscription = this.service.getStatus({subscribe: true}, this.handleSysInfo.bind(this));
   this.clientListSubscription = this.service.getClientList({subscribe: true}, this.handleClientList.bind(this));
   this.btProfileSubscription = this.service.getPrefs({keys:['btprofiledisable'], subscribe: true}, this.updateBTProfile.bind(this));
+	this.ipForwardSubscription = this.service.getIPForward({subscribe: true}, this.handleIPForward.bind(this));
 	
 	this.controller.setupWidget('wifiSpinner', {}, this.ifSpinner.wifi);
 	this.controller.setupWidget('btSpinner', {}, this.ifSpinner.bluetooth);
@@ -278,36 +282,68 @@ MainAssistant.prototype.handleClientList = function(payload) {
   this.controller.modelChanged(this.clientListModel, this);
 }
 
+MainAssistant.prototype.handleIPForward = function(payload) {
+
+  if (!payload || !payload.state)
+    return;
+  
+  var ipforwardClass = '';
+  switch (payload.state) {
+    case 0:
+      ipforwardClass = 'icon status-offline';
+      break;
+    case 1:
+      ipforwardClass = 'icon status-available';
+      break;
+  }
+  this.ipForwardIcon.className = ipforwardClass;
+
+}
+
 MainAssistant.prototype.handleSysInfo = function(payload) {
 
   if (!payload || !payload.sysInfo)
     return;
+  
+  var dhcpClass = '';
+  switch (payload.sysInfo.stateDHCPServer) {
+    case 'STOPPED':
+      dhcpClass = 'icon status-offline';
+      break;
+    case 'STARTED':
+      dhcpClass = 'icon status-available';
+      break;
+    case 'START REQUESTED':
+    case 'STOP REQUESTED':
+      dhcpClass = 'icon status-busy';
+      break;
+    case 'ERROR':
+      dhcpClass = 'icon status-error';
+      break;
+  }
+  this.dhcpIcon.className = dhcpClass;
  
+  var interfaces = ['wifi','bluetooth','usb'];
   var len = payload.sysInfo.interfaces.length;
   var i = 0;
   
-  if (len == 0) {
-    ['wifi','bluetooth','usb'].each(function(ifType){
-      this.ifSpinner[ifType].spinning = false;
-      this.controller.modelChanged(this.ifSpinner[ifType], this);
-    }, this);
-  } else {
+  ['wifi','bluetooth','usb'].each(function(ifType){
+    this.ifSpinner[ifType].spinning = false;
+  }, this);
+  
+  if (len > 0) {
     for (; i<len; i++) {
-      ipState = payload.sysInfo.stateIPv4;
-      dhcpState = payload.sysInfo.stateDHCPServer;
       ifType = payload.sysInfo.interfaces[i].type;
       ifState = payload.sysInfo.interfaces[i].stateInterface;
-      brState = payload.sysInfo.interfaces[i].stateInterfaceBridged;
-      if (ifState == 'CREATED' && brState == 'BRIDGED' && ipState == 'ASSIGNED' && dhcpState == 'STARTED') {
-        this.ifSpinner[ifType].spinning = false;
-      } else if (ifState == 'DESTROYED' && brState == 'UNBRIDGED') {
-        this.ifSpinner[ifType].spinning = false;
-      } else {
+      if (ifState == 'CREATE REQUESTED' || ifState == 'DESTROY REQUESTED')
         this.ifSpinner[ifType].spinning = true;
-      }
-      this.controller.modelChanged(this.ifSpinner[ifType], this);
+      
     }
   }
+  
+  ['wifi','bluetooth','usb'].each(function(ifType){
+    this.controller.modelChanged(this.ifSpinner[ifType], this);
+  }, this);
 
 }
 

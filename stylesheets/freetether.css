@@ -39,6 +39,10 @@
   padding-left: 40px;
 }
 
+.status-error {
+  background: url(../images/status-error.png) center center no-repeat;
+}
+
 /*
  * Help Scene Styles
  */
