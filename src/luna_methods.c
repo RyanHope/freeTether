@@ -557,6 +557,9 @@ bool dhcp_final_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
       ifaceInfo.ip_state = REMOVE_REQUESTED;
       pthread_mutex_unlock(&ifaceInfo.mutex);
 
+      if (get_ip_forward_state())
+        toggle_ip_forward_state();
+
       LSCall(priv_serviceHandle, "palm://com.palm.netroute/removeNetIf", payload, 
           remove_netif_callback, NULL, NULL, &lserror);
 
@@ -733,6 +736,8 @@ bool iface_status_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
 void remove_iface(struct interface *iface) {
   struct interface *iter = ifaceInfo.ifaces;
 
+  syslog(LOG_DEBUG, "remove iface %p, iter %p", iface, iter);
+
   if (!iface || !iter)
     return;
 
@@ -786,9 +791,7 @@ bool delete_ap_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
 
   if (returnValue) {
     if (iface) {
-      LSCallCancel(priv_serviceHandle, interface_status.token, &lserror);
-      interface_status.subscribed = false;
-      interface_status.token = 0;
+      LS_SUB_CANCEL(interface_status);
       remove_iface(iface);
     }
     LSCall(priv_serviceHandle, "luna://com.palm.wifi/setstate", "{\"state\":\"enabled\"}", 
@@ -877,8 +880,13 @@ bool interfaceRemove(LSHandle *sh, LSMessage *msg, void *ctx) {
 
   if (!strcmp(type, "wifi"))
     delete_ap(type, ifname);
-  else
+  else {
+    if (!strcmp(type, "bluetooth")) {
+      LS_SUB_CANCEL(bluetooth);
+      LS_SUB_CANCEL(btmonitor);
+    }
     remove_iface(get_iface(type, ifname));
+  }
 
   LSMessageReply(sh, msg, "{\"returnValue\":true}", &lserror);
   return true;

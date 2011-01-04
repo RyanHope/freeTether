@@ -30,6 +30,13 @@ do { \
 #define LS_PRIV_SUBSCRIBE(method, sub, ctx) \
   LSCall(priv_serviceHandle, "luna://com.palm."method, "{\"subscribe\":true}", sub.callback, ctx, &sub.token, &lserror)
 
+#define LS_SUB_CANCEL(sub) \
+  do { \
+      LSCallCancel(priv_serviceHandle, sub.token, &lserror); \
+      sub.subscribed = false; \
+      sub.token = 0; \
+  } while (0)
+
 #define UPDATE_CLIENT(param) \
   do { \
     if (param && (!client->param || !strcmp(client->param, param))) { \

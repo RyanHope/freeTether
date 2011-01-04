@@ -80,6 +80,11 @@ int toggle_ip_forward_state() {
   fscanf(fp, "%d", &state);
   state ^= 1;
 
+  if (state) 
+    system("iptables -t nat -I POSTROUTING -j MASQUERADE");
+  else
+    system("iptables -t nat --flush");
+
   for (i=0; i<5; i++) {
     if (ret == 1)
       break;
@@ -88,11 +93,6 @@ int toggle_ip_forward_state() {
 
   syslog(LOG_DEBUG, "Tried to write state %d times, final ret %d\n", i, ret);
   fclose(fp);
-
-  if (state) 
-    system("iptables -t nat -I POSTROUTING -j MASQUERADE");
-  else
-    system("iptables -t nat --flush");
 
   return 0;
 }
@@ -165,11 +165,10 @@ void *ipmon_thread(void *ptr) {
 }
 
 void setup_fake_proc() {
-
-  char template[] = "/tmp/freeTether.XXXXXX";
-  tmpDir = strdup(mkdtemp(template));
+  tmpDir = "/tmp/freetether";
 
   asprintf(&tmpProc,"%s/proc", tmpDir);
+  mkdir(tmpDir);
   mkdir(tmpProc);
 
   FILE *fp;
@@ -178,11 +177,12 @@ void setup_fake_proc() {
   fprintf(fp, "0\n");
   fclose(fp);
 
-  asprintf(&tmp_ip_forward,"%s%s", tmpProc, IP_FORWARD);
+  asprintf(&tmp_ip_forward,"%s%s", tmpDir, IP_FORWARD);
 
-  mount(fake_ip_forward, IP_FORWARD, NULL, MS_BIND, NULL);
-  mount("proc", tmpProc, "proc", 0, NULL);
-
+  if (!is_mounted(IP_FORWARD))
+    mount(fake_ip_forward, IP_FORWARD, NULL, MS_BIND, NULL);
+  if (!is_mounted(tmpProc))
+    mount("proc", tmpProc, "proc", 0, NULL);
 }
 
 void cleanup_fake_proc() {

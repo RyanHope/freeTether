@@ -25,6 +25,7 @@ ${IPKG}: service build/arm/CONTROL/control
 	cp -r images build/arm/usr/palm/applications/${APP_ID}
 	cp -r stylesheets build/arm/usr/palm/applications/${APP_ID}
 	cp -r dbus build/arm/usr/palm/applications/${APP_ID}
+	cp -r scripts build/arm/usr/palm/applications/${APP_ID}
 	mkdir -p build/arm/usr/palm/applications/${APP_ID}/bin
 	install -m 755 src/freetether build/arm/usr/palm/applications/${APP_ID}/bin/${APP_ID}
 	( cd build; TAR_OPTIONS="--wildcards --mode=g-s" ipkg-build -o 0 -g 0 -p arm )
