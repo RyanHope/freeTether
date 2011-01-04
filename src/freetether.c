@@ -110,6 +110,8 @@ int main(int argc, char **argv) {
 
   openlog(APP_ID, LOG_PID, LOG_USER);
 
+  setup_fake_proc();
+
   int ret = is_mounted("/usr/bin/mobilehotspotd");
   if (ret == -1) return -1;
   else if (ret == 0 && mount("/bin/true", "/usr/bin/mobilehotspotd", NULL, MS_BIND, NULL)) {

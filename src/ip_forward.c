@@ -2,27 +2,32 @@
 #include <stdio.h>
 #include <string.h>
 #include <syslog.h>
+#include <sys/mount.h>
 #include <sys/inotify.h>
 
 #include "luna_methods.h"
 #include "luna_service.h"
 
 #define IP_FORWARD "/proc/sys/net/ipv4/ip_forward"
+
 #define BUF_SIZE (32*(sizeof(struct inotify_event)+16))
 
 int monitor_ip_forward;
+char *tmpProc;
+char *tmp_ip_forward;
 
 void ip_forward_cleanup() {
   monitor_ip_forward = 0;
+  cleanup_fake_proc();
 }
 
 int get_ip_forward_state() {
   FILE *fp;
   int state = -1;
 
-  fp = fopen(IP_FORWARD, "r");
+  fp = fopen(tmp_ip_forward, "r");
   if (!fp) {
-    syslog(LOG_ERR, "Error opening %s for reading", IP_FORWARD);
+    syslog(LOG_ERR, "Error opening %s for reading", tmp_ip_forward);
     return -1;
   }
 
@@ -42,7 +47,7 @@ bool get_ip_forward(LSHandle* lshandle, LSMessage *message, void *ctx) {
   LSSubscriptionProcess(lshandle,message,&subscribed,&lserror);
 
   char *tmp = 0;
-  len = asprintf(&tmp, "{\"returnValue\":true,\"state\":%c}", (char)get_ip_forward_state());
+  len = asprintf(&tmp, "{\"returnValue\":true,\"state\":%d}", get_ip_forward_state());
   if (tmp)
     LSMessageReply(lshandle,message,tmp,&lserror);
   else
@@ -63,10 +68,10 @@ int toggle_ip_forward_state() {
   int count = 0;
   int i;
 
-  fp = fopen(IP_FORWARD, "w+");
+  fp = fopen(tmp_ip_forward, "w+");
 
   if (!fp) {
-    syslog(LOG_ERR, "Cannot open %s for writing", IP_FORWARD);
+    syslog(LOG_ERR, "Cannot open %s for writing", tmp_ip_forward);
     return -1;
   }
 
@@ -107,8 +112,6 @@ bool toggle_ip_forward(LSHandle* lshandle, LSMessage *message, void *ctx) {
 }
 
 void *ipmon_thread(void *ptr) {
-  // TODO: seg faulting
-  return NULL;
 
   LSError lserror;
   LSErrorInit(&lserror);
@@ -119,7 +122,7 @@ void *ipmon_thread(void *ptr) {
     return;
   }
 
-  int wd = inotify_add_watch(fd, IP_FORWARD, IN_CLOSE_WRITE);
+  int wd = inotify_add_watch(fd, tmp_ip_forward, IN_CLOSE_WRITE);
   if (wd<0) {
     syslog(LOG_ERR, "inotify_add_watch failed");
     return;
@@ -133,12 +136,12 @@ void *ipmon_thread(void *ptr) {
   while (monitor_ip_forward) {
     len = read (fd, buf, BUF_SIZE);
     if (len > 0) {
-      fp = fopen(IP_FORWARD, "r");
+      fp = fopen(tmp_ip_forward, "r");
       if (fp) {
         fscanf(fp, "%d", &state);
         fclose(fp);
         syslog(LOG_DEBUG, "monitor thread state %d", state);
-        len = asprintf(&tmp, "{\"state\":%d}", state);
+        len = asprintf(&tmp, "{\"returnValue\":true,\"state\":%d}", state);
         if (tmp) {
           LSSubscriptionRespond(serviceHandle,"/get_ip_forward",tmp, &lserror);
           free(tmp);
@@ -151,5 +154,29 @@ void *ipmon_thread(void *ptr) {
     LSErrorPrint(&lserror, stderr);
     LSErrorFree(&lserror);
   }
+
+}
+
+void setup_fake_proc() {
+
+  char template[] = "/tmp/freeTether.XXXXXX";
+  tmpProc = strdup(mkdtemp(template));
+
+  asprintf(&tmp_ip_forward,"%s/sys/net/ipv4/ip_forward", tmpProc);
+
+  mount("/dev/null", IP_FORWARD, NULL, MS_BIND, NULL);
+  mount("proc", tmpProc, "proc", 0, NULL);
+
+}
+
+void cleanup_fake_proc() {
+
+  umount(tmpProc);
+  umount(IP_FORWARD);
+
+  free(tmp_ip_forward);
+
+  rmdir(tmpProc);
+  free(tmpProc);
 
 }
