@@ -284,7 +284,7 @@ MainAssistant.prototype.handleClientList = function(payload) {
 
 MainAssistant.prototype.handleIPForward = function(payload) {
 
-  if (!payload || !payload.state)
+  if (!payload || typeof(payload.state) !== 'number')
     return;
   
   var ipforwardClass = '';

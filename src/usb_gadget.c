@@ -6,6 +6,7 @@
 
 #include "luna_methods.h"
 #include "luna_service.h"
+#include "usb_gadget.h"
 
 #define USB_GADGET "/sys/class/usb_gadget/config_num"
 #define BUF_SIZE (32*(sizeof(struct inotify_event)+16))

@@ -6,6 +6,7 @@
 #include "luna_methods.h"
 #include "luna_service.h"
 #include "freetether.h"
+#include "usb_gadget.h"
 
 // TODO: fix to store all the info in ifaceInfo, to get it back to mojo via sysInfo subscription.
 // Change to a main thread state machine, and have callbacks awake the thread to indicate state change?
@@ -495,9 +496,6 @@ bool lease_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
     // leases first child should be an array.  
     // If that array has at least one child then toggle ip forward on
     if (leases && leases->child && leases->child->child) {
-      if (!get_ip_forward_state())
-        toggle_ip_forward_state();
-
       update_leases(json_find_first_label(leases->child->child, "leases"));
     }
   }
@@ -583,6 +581,9 @@ bool dhcp_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
     ifaceInfo.dhcp_state = STARTED;
     pthread_mutex_unlock(&ifaceInfo.mutex);
 
+    if (!get_ip_forward_state())
+      toggle_ip_forward_state();
+
     if (!dhcp_lease.subscribed)
       LS_PRIV_SUBSCRIBE("dhcp/server/leaseInformation", dhcp_lease, NULL);
 
@@ -657,6 +658,7 @@ void add_bridge(struct interface *iface) {
   system(command);
 
   pthread_mutex_lock(&iface->mutex);
+  iface->link_state = UP;
   iface->bridge_state = BRIDGED;
   pthread_mutex_unlock(&iface->mutex);
 
@@ -726,7 +728,6 @@ bool iface_status_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
     }
   }
   else {
-    // if (is_subscription(msg))
     interface_status.subscribed = false;
   }
 
@@ -1101,6 +1102,36 @@ bool enable_bt_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
   return true;
 }
 
+void enable_usb(struct interface *iface) {
+  int state = get_usb_gadget_state();
+
+  syslog(LOG_DEBUG, "enable usb gadget state %d", state);
+  switch(state) {
+    case RH_CONFIG_USBNET_UMS_NOVACOM:
+    case RH_CONFIG_USBNET_PASSTHRU:
+      break;
+    case RH_CONFIG_UMS:
+    case RH_CONFIG_UMS_NOVACOM:
+      set_usb_gadget_state(RH_CONFIG_USBNET_UMS_NOVACOM);
+      break;
+    case RH_CONFIG_PASSTHRU:
+    case RH_CONFIG_PASSTHRU_NOVACOM:
+      set_usb_gadget_state(RH_CONFIG_USBNET_PASSTHRU);
+      break;
+    default:
+      syslog(LOG_ERR, "Error unknown usb gadget state %d", state);
+      return;
+      break;
+  }
+
+  pthread_mutex_lock(&iface->mutex);
+  iface->iface_state = CREATED;
+  iface->link_state = UP;
+  pthread_mutex_unlock(&iface->mutex);
+
+  add_bridge(iface);
+}
+
 bool interfaceAdd(LSHandle *sh, LSMessage *msg, void *ctx) {
   LSError lserror;
   LSErrorInit(&lserror);
@@ -1158,19 +1189,12 @@ bool interfaceAdd(LSHandle *sh, LSMessage *msg, void *ctx) {
         disable_wifi_callback, (void*)ap, NULL, &lserror);
   }
   else if (!strcmp(type, "bluetooth")) {
-#if 0
-    struct interface *iface;
-    syslog(LOG_DEBUG, "btmonitor sub %d", btmonitor.subscribed);
-    iface = request_interface("bluetooth", NULL, NULL);
-    if (!btmonitor.subscribed)
-      LS_PRIV_SUBSCRIBE("btmonitor/monitor/subscribenotifications", btmonitor, (void *)iface);
-#else
     LSCall(priv_serviceHandle, "palm://com.palm.btmonitor/monitor/radioon", 
         "{\"visible\":true, \"connectable\": true}", enable_bt_callback, NULL, NULL, &lserror);
-#endif
   }
   else if (!strcmp(type, "usb")) {
-    // TODO: get the states working (or not) for usb
+    struct interface *iface = NULL;
+    
     if (object->child && object->child->child && object->child->child->type == JSON_OBJECT)
       json_get_string(object->child->child, "ifname", &ifname);
 
@@ -1179,9 +1203,9 @@ bool interfaceAdd(LSHandle *sh, LSMessage *msg, void *ctx) {
       return true;
     }
 
-    struct interface *iface = request_interface("usb", ifname, NULL);
+    iface = request_interface("usb", ifname, NULL);
     if (iface)
-      add_bridge(iface);
+      enable_usb(iface);
   }
   else {
     LS_REPLY_ERROR("Invalid Interface type specified");
