@@ -352,8 +352,8 @@ void add_connection(char *mac, char *hostname, char *ipv4, char *leaseTimeString
   pthread_mutex_unlock(&ifaceInfo.mutex);
 }
 
-void update_connection(char *mac, char *hostname, char *ipv4, char *leaseTimeString, char *leaseExpiryString, 
-    struct interface *iface) {
+void update_connection(char *mac, char *hostname, char *ipv4, 
+    char *leaseTimeString, char *leaseExpiryString, struct interface *iface) {
 
   bool found = false;
   struct client *client;
@@ -1033,7 +1033,7 @@ bool disable_wifi_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
 
     syslog(LOG_DEBUG, "passphrase %s", ap->passphrase);
     if (ap->passphrase /* && not Open ? */)
-      asprintf(&payload, "%s, \"Passphrase\": %s", payload, ap->passphrase);
+      asprintf(&payload, "%s, \"Passphrase\": \"%s\"", payload, ap->passphrase);
 
     asprintf(&payload, "%s}", payload);
 
