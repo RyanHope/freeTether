@@ -81,6 +81,7 @@ WifiPrefsAssistant.prototype.updateSecurityWidgets = function() {
 }
 
 WifiPrefsAssistant.prototype.securityChanged = function(event) {
+  Mojo.Log.error("security changed " + this.prefs.security);
   this.cookie.put(this.prefs);
   this.updateSecurityWidgets();
 }
