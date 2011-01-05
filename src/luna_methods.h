@@ -14,6 +14,7 @@ bool toggle_ip_forward(LSHandle* lshandle, LSMessage *message, void *ctx);
 bool get_ip_forward(LSHandle* lshandle, LSMessage *message, void *ctx);
 bool get_usb_gadget(LSHandle* lshandle, LSMessage *message, void *ctx);
 bool set_usb_gadget(LSHandle* lshandle, LSMessage *message, void *ctx);
+bool restart_bluetooth(LSHandle* lshandle, LSMessage *message, void *ctx);
 
 #define LS_REPLY_ERROR(err) \
 do { \

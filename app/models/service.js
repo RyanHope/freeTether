@@ -115,3 +115,14 @@ FreeTetherService.getIPForward = function(param, callback) {
 
   return request;
 };
+
+FreeTetherService.restartBluetooth = function(callback) {
+  var request = new Mojo.Service.Request(FreeTetherService.ServiceUri, {
+    method: 'restart_bluetooth',
+    parameters: '{}',
+    onSuccess: callback,
+    onFailure: callback
+  });
+
+  return request;
+};

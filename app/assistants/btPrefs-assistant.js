@@ -41,6 +41,7 @@ BtPrefsAssistant.prototype.togglePanState = function(payload) {
     else if (payload.btprofiledisable[0] == "PAN")
       payload.btprofiledisable[0] = "";
     FreeTetherService.setPrefs({btprofiledisable:payload.btprofiledisable});
+    FreeTetherService.restartBluetooth();
   }
 
 }
