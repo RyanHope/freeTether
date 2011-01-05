@@ -1,4 +1,6 @@
 var vers = new versionCookie();
+var prefs = new preferenceCookie();
+var service = new FreeTetherService();
 
 function StageAssistant() {
 

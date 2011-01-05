@@ -2,7 +2,6 @@ function UsbPrefsAssistant() {
 
   this.cookie = new preferenceCookie();
   this.prefs = this.cookie.get();
-  this.service = new FreeTetherService();
   
   this.usbChoices = [
     {label:$L('UMS'),                     value:1},
@@ -34,12 +33,12 @@ UsbPrefsAssistant.prototype.setup = function() {
   );
   this.controller.listen('usbGadget', Mojo.Event.propertyChange, this.usbChangedHandler);
   
-  this.getUSBSubscription = this.service.getUSB({subscribe: true}, this.updateUSB.bind(this));
+  this.getUSBSubscription = service.getUSB({subscribe: true}, this.updateUSB.bind(this));
 
 };
 
 UsbPrefsAssistant.prototype.usbChanged = function(event) {
-  this.service.setUSB({'state':event.value});
+  service.setUSB({'state':event.value});
 }
 
 UsbPrefsAssistant.prototype.updateUSB = function(payload) {
@@ -53,6 +52,7 @@ UsbPrefsAssistant.prototype.activate = function(event) {
 };
 
 UsbPrefsAssistant.prototype.deactivate = function(event) {
+  var tmp = prefs.get(true);
 };
 
 UsbPrefsAssistant.prototype.cleanup = function(event) {

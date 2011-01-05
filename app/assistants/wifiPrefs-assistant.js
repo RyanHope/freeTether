@@ -93,6 +93,7 @@ WifiPrefsAssistant.prototype.activate = function(event) {
 };
 
 WifiPrefsAssistant.prototype.deactivate = function(event) {
+  var tmp = prefs.get(true);
 };
 
 WifiPrefsAssistant.prototype.cleanup = function(event) {

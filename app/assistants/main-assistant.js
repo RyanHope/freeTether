@@ -28,9 +28,6 @@ function MainAssistant() {
   this.BT_IFNAME = "bsl0";
   this.USB_IFNAME = "usb0:1";
 
-	this.cookie = new preferenceCookie();
-  this.service = new FreeTetherService();
-	this.prefs = this.cookie.get();
   this.statusSubscription = null;
     
   this.panModel = {value: false};
@@ -73,9 +70,7 @@ MainAssistant.prototype.setup = function() {
   this.panProfile          = this.controller.get('panProfile');
 
   this.clientList          = this.controller.get('clientList');
-	
-	this.textChanged             = this.textChanged.bindAsEventListener(this);
-    
+	  
   this.controller.setupWidget(
     'panProfile',
     {
@@ -165,11 +160,11 @@ MainAssistant.prototype.setup = function() {
 	this.controller.listen('bluetooth', Mojo.Event.propertyChange, this.toggleChangeHandler);
 	this.controller.listen('usb', Mojo.Event.propertyChange, this.toggleChangeHandler);
 	 
-  this.serviceStatusSubscription = this.service.monitorServer("org.webosinternals.freetether", this.server.bind(this));
-  this.sysInfoSubscription = this.service.getStatus({subscribe: true}, this.handleSysInfo.bind(this));
-  this.clientListSubscription = this.service.getClientList({subscribe: true}, this.handleClientList.bind(this));
-  this.btProfileSubscription = this.service.getPrefs({keys:['btprofiledisable'], subscribe: true}, this.updateBTProfile.bind(this));
-	this.ipForwardSubscription = this.service.getIPForward({subscribe: true}, this.handleIPForward.bind(this));
+  this.serviceStatusSubscription = service.monitorServer("org.webosinternals.freetether", this.server.bind(this));
+  this.sysInfoSubscription = service.getStatus({subscribe: true}, this.handleSysInfo.bind(this));
+  this.clientListSubscription = service.getClientList({subscribe: true}, this.handleClientList.bind(this));
+  this.btProfileSubscription = service.getPrefs({keys:['btprofiledisable'], subscribe: true}, this.updateBTProfile.bind(this));
+	this.ipForwardSubscription = service.getIPForward({subscribe: true}, this.handleIPForward.bind(this));
 	
 	this.controller.setupWidget('wifiSpinner', {}, this.ifSpinner.wifi);
 	this.controller.setupWidget('btSpinner', {}, this.ifSpinner.bluetooth);
@@ -179,10 +174,6 @@ MainAssistant.prototype.setup = function() {
   this.btGroup.style.display = 'none';
 	
 };
-
-MainAssistant.prototype.textChanged = function(event) {
-  this.cookie.put(this.prefs);
-}
 
 MainAssistant.prototype.server = function(payload) {
         for (p in payload) {
@@ -394,11 +385,11 @@ MainAssistant.prototype.addInterface = function(type) {
 
   switch(type) {
     case 'wifi':
-      payload[type].SSID = this.prefs.network || this.DEFAULT_NETWORK;
-      payload[type].Security = this.prefs.security || this.DEFAULT_SECURITY;
+      payload[type].SSID = prefs.get().network || this.DEFAULT_NETWORK;
+      payload[type].Security = prefs.get().security || this.DEFAULT_SECURITY;
       
       if (payload[type].Security !== 'Open')
-        payload[type].Passphrase = this.prefs.passphrase || "";
+        payload[type].Passphrase = prefs.get().passphrase || "";
 
       //payload[type].interfaceIdleTimeout = true;
       break;
@@ -410,7 +401,7 @@ MainAssistant.prototype.addInterface = function(type) {
       break;
   }
   
-  this.service.addInterface(payload);
+  service.addInterface(payload);
 }
 
 MainAssistant.prototype.removeInterface = function(type) {
@@ -429,7 +420,7 @@ MainAssistant.prototype.removeInterface = function(type) {
       break;
   }
 
-  this.service.removeInterface(payload);
+  service.removeInterface(payload);
 }
 
 MainAssistant.prototype.toggleChanged = function(event) {
