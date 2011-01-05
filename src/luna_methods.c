@@ -783,11 +783,13 @@ void add_bridge(struct interface *iface) {
   if (!iface)
     return;
 
+#if 0
   // TODO: Check that bridge/interface doesn't already exist
   ret = br_add_bridge("bridge0");
   syslog(LOG_DEBUG, "add bridge %d\n", ret);
   ret = br_add_interface("bridge0", iface->ifname);
   syslog(LOG_DEBUG, "add interface %d\n", ret);
+#endif
 
   system("brctl addbr bridge0");
   char command[80];
