@@ -320,21 +320,23 @@ MainAssistant.prototype.handleSysInfo = function(payload) {
   
   ['wifi','bluetooth','usb'].each(function(ifType){
     this.ifSpinner[ifType].spinning = false;
+    this.ifToggle[ifType].value = false;
   }, this);
   
+  Mojo.Log.error("wifi spinning " + this.ifSpinner['wifi'].spinning);
+
   if (len > 0) {
     for (; i<len; i++) {
       ifType = payload.sysInfo.interfaces[i].type;
       ifState = payload.sysInfo.interfaces[i].stateInterface;
       if (ifState == 'CREATE REQUESTED' || ifState == 'DESTROY REQUESTED')
         this.ifSpinner[ifType].spinning = true;
-      else if (ifState == 'CREATED')
+      if (ifState == 'CREATED' || ifState == 'CREATE REQUESTED')
         this.ifToggle[ifType].value = true;
-      else if (ifState == 'DESTROYED')
-        this.ifToggle[ifType].value = false;
     }
   }
   
+  Mojo.Log.error("wifi spinning " + this.ifSpinner['wifi'].spinning);
   ['wifi','bluetooth','usb'].each(function(ifType){
     this.controller.modelChanged(this.ifSpinner[ifType], this);
     this.controller.modelChanged(this.ifToggle[ifType], this);

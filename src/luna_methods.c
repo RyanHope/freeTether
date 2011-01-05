@@ -754,6 +754,7 @@ void remove_iface(struct interface *iface) {
           "{\"interface\":\"bridge0\"}", dhcp_final_callback, NULL, NULL, &lserror);
     }
 
+    sysinfo_response();
     return;
   }
 
@@ -765,6 +766,8 @@ void remove_iface(struct interface *iface) {
     iter->next = iface->next;
     free_iface(iface);
   }
+
+  sysinfo_response();
 }
 
 int num_interfaces() {
@@ -799,7 +802,6 @@ bool delete_ap_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
         NULL, NULL, NULL, &lserror);
   }
 
-  //sysinfo_response();
   return true;
 }
 
@@ -1029,6 +1031,7 @@ bool disable_wifi_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
 
     asprintf(&payload, "{\"SSID\": \"%s\", \"Security\": \"%s\"", ap->ssid, ap->security);
 
+    syslog(LOG_DEBUG, "passphrase %s", ap->passphrase);
     if (ap->passphrase /* && not Open ? */)
       asprintf(&payload, "%s, \"Passphrase\": %s", payload, ap->passphrase);
 
@@ -1185,6 +1188,7 @@ bool interfaceAdd(LSHandle *sh, LSMessage *msg, void *ctx) {
     if (passphrase)
       ap->passphrase = strdup(passphrase);
 
+    syslog(LOG_DEBUG, "adding with pp %s", passphrase);
     LSCall(priv_serviceHandle, "palm://com.palm.wifi/setstate", "{\"state\": \"disabled\"}", 
         disable_wifi_callback, (void*)ap, NULL, &lserror);
   }
