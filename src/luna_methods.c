@@ -20,6 +20,13 @@
 #define DBUS_NETROUTE "luna://com.palm.netroute"
 #define DBUS_DHCP "luna://com.palm.dhcp"
 
+struct dhcp {
+  json_t *leases;
+  pthread_mutex_t mutex;
+};
+
+struct dhcp dhcp = {NULL, PTHREAD_MUTEX_INITIALIZER};
+
 // TODO: Smooth/verify subscriptions and cancellability
 struct subscription {
   LSFilterFunc callback;
@@ -316,6 +323,43 @@ char *strlower(char *str) {
   return str;
 }
 
+void update_lease(struct client *client) {
+
+  if (dhcp.leases && dhcp.leases->child && dhcp.leases->child->type == JSON_ARRAY && 
+      dhcp.leases->child->child) {
+
+    json_t *lease = NULL;
+    pthread_mutex_lock(&dhcp.mutex);
+    for (lease = dhcp.leases; lease; lease = lease->next) {
+      char *mac = NULL;
+      char *ipv4 = NULL;
+      char *leaseTimeString = NULL;
+      char *leaseExpiryString = NULL;
+      char *hostname = NULL;
+
+      json_get_string(lease, "mac", &mac);
+      if (!mac || strcmp(mac, client->mac) != 0)
+          continue;
+
+      json_get_string(lease, "ipv4", &ipv4);
+      json_get_string(lease, "leaseTimeString", &leaseTimeString);
+      json_get_string(lease, "leaseExpiryString", &leaseExpiryString);
+      json_get_string(lease, "hostName", &hostname);
+
+      syslog(LOG_DEBUG, "update lease mac %s, ipv4 %s, leaseTime %s, leaseExpiry %s, hostName %s\n", 
+          mac, ipv4, leaseTimeString, leaseExpiryString, hostname);
+
+      UPDATE_CLIENT(hostname);
+      UPDATE_CLIENT(ipv4);
+      UPDATE_CLIENT(leaseTimeString);
+      UPDATE_CLIENT(leaseExpiryString);
+    }
+    pthread_mutex_unlock(&dhcp.mutex);
+    
+    clientlist_response();
+  }
+}
+
 void add_connection(char *mac, char *hostname, char *ipv4, char *leaseTimeString, char *leaseExpiryString, 
     struct interface *iface) {
   struct client *iter = NULL;
@@ -350,6 +394,8 @@ void add_connection(char *mac, char *hostname, char *ipv4, char *leaseTimeString
     iter->next = client;
   }
   pthread_mutex_unlock(&ifaceInfo.mutex);
+
+  update_lease(client);
 }
 
 void update_connection(char *mac, char *hostname, char *ipv4, 
@@ -358,11 +404,14 @@ void update_connection(char *mac, char *hostname, char *ipv4,
   bool found = false;
   struct client *client;
 
-  syslog(LOG_DEBUG, "UPDATE CONNECTiON %s, %s, %s, %s, %s, %p\n", mac, hostname, ipv4, leaseTimeString, leaseExpiryString, iface);
+  syslog(LOG_DEBUG, "UPDATE CONNECTiON %s, %s, %s, %s, %s, %p\n", 
+      mac, hostname, ipv4, leaseTimeString, leaseExpiryString, iface);
+
   if (!mac)
     return;
 
   for (client = ifaceInfo.connections; client; client = client->next) {
+    syslog(LOG_DEBUG, "client %p, mac %s", client, client->mac);
     if (client->mac && !strcmp(mac, client->mac)) {
       UPDATE_CLIENT(hostname);
       UPDATE_CLIENT(ipv4);
@@ -375,9 +424,23 @@ void update_connection(char *mac, char *hostname, char *ipv4,
     }
   }
 
-  if (!found) {
+  if (!found && iface) {
     syslog(LOG_DEBUG, "  add new connection");
     add_connection(mac, hostname, ipv4, leaseTimeString, leaseExpiryString, iface);
+  }
+}
+
+static void free_client(struct client *client) {
+  if (client) {
+    FREE(client->mac);
+    FREE(client->hostname);
+    FREE(client->ipv4);
+    FREE(client->leaseTimeString);
+    FREE(client->leaseExpiryString);
+    if (client->iface)
+      client->iface = NULL;
+
+    free(client);
   }
 }
 
@@ -386,24 +449,77 @@ void free_connections() {
   struct client *client = ifaceInfo.connections;
 
   while (client) {
-    FREE(client->mac);
-    FREE(client->hostname);
-    FREE(client->ipv4);
-    FREE(client->leaseTimeString);
-    FREE(client->leaseExpiryString);
-    if (client->iface)
-      client->iface = NULL;
     prev = client;
     client = client->next;
-    free(prev);
+    free_client(prev);
   }
 
   ifaceInfo.connections = NULL;
 }
 
+void remove_connection(struct client *client) {
+  struct client *iter = ifaceInfo.connections;
+
+  syslog(LOG_DEBUG, "remove client %p, iter %p", client, iter);
+
+  if (!client || !iter)
+    return;
+
+  if (iter == client) {
+    ifaceInfo.connections = client->next;
+    free_client(client);
+
+    goto done;
+  }
+
+  while (iter->next && client != iter->next) {
+    iter = iter->next;
+  }
+
+  if (iter->next) {
+    iter->next = client->next;
+    free_client(client);
+  }
+
+done:
+  sysinfo_response();
+}
+
+void remove_old_clients(char *type, json_t *clientList) {
+  json_t *newClient;
+  struct client *client;
+  bool found = false;
+
+  if (!type)
+    return;
+
+  for (client = ifaceInfo.connections; client; client = client->next) {
+    found = false;
+    if (client->iface && client->iface->type && !strcmp(client->iface->type, type)) {
+      for (newClient = clientList; newClient; newClient = newClient->next) {
+        char *mac;
+        json_t *wifi_client = json_find_first_label(newClient, "clientInfo");
+
+        if (wifi_client && wifi_client->child)
+          json_get_string(wifi_client->child, "macAddress", &mac);
+        else
+          json_get_string(newClient, "macAddress", &mac);
+
+        if (!strcmp(mac, client->mac))
+          found = true;
+      }
+
+      if (!found)
+        remove_connection(client);
+    }
+  }
+}
+
 void update_clients(struct interface *iface, json_t *object) {
   if (object && object->child && object->child->type == JSON_ARRAY && object->child->child) {
     json_t *client = object->child->child;
+
+    remove_old_clients(iface->type, client);
 
     while (client) {
       char *mac, *hostname = NULL;
@@ -420,9 +536,20 @@ void update_clients(struct interface *iface, json_t *object) {
       update_connection(mac, hostname, NULL, NULL, NULL, iface);
       client = client->next;
     }
-
-    clientlist_response();
   }
+  else {
+    syslog(LOG_DEBUG, "Remove all clients of iface type %s", (iface) ? iface->type : "?");
+    if (iface && iface->type) {
+      struct client *client;
+      for (client = ifaceInfo.connections; client; client = client->next) {
+        if (client->iface && client->iface->type && !strcmp(iface->type, client->iface->type)) {
+          remove_connection(client);
+        }
+      }
+    }
+  }
+
+  clientlist_response();
 }
 
 void update_leases(json_t *object) {
@@ -430,8 +557,9 @@ void update_leases(json_t *object) {
   if (object && object->child && object->child->type == JSON_ARRAY && object->child->child) {
     json_t *lease = NULL;
 
-    // Just free and regenerate, make life easier
-    free_connections();
+    pthread_mutex_lock(&dhcp.mutex);
+    dhcp.leases = object->child->child;
+    pthread_mutex_unlock(&dhcp.mutex);
 
     for (lease = object->child->child; lease; lease = lease->next) {
       char *mac = NULL;
@@ -446,7 +574,8 @@ void update_leases(json_t *object) {
       json_get_string(lease, "leaseExpiryString", &leaseExpiryString);
       json_get_string(lease, "hostName", &hostname);
 
-      syslog(LOG_DEBUG, "lease mac %s, ipv4 %s, leaseTime %s, leaseExpiry %s, hostName %s\n", mac, ipv4, leaseTimeString, leaseExpiryString, hostname);
+      syslog(LOG_DEBUG, "lease mac %s, ipv4 %s, leaseTime %s, leaseExpiry %s, hostName %s\n", 
+          mac, ipv4, leaseTimeString, leaseExpiryString, hostname);
       // If no mac, ip or lease information, just skip
       if (!mac || !ipv4 || !leaseTimeString || !leaseExpiryString)
         continue;
@@ -455,6 +584,11 @@ void update_leases(json_t *object) {
     }
     
     clientlist_response();
+  }
+  else {
+    pthread_mutex_lock(&dhcp.mutex);
+    dhcp.leases = NULL;
+    pthread_mutex_unlock(&dhcp.mutex);
   }
 }
 
@@ -493,10 +627,17 @@ bool lease_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
     if (is_subscription(msg))
       dhcp_lease.subscribed = true;
 
-    // leases first child should be an array.  
-    // If that array has at least one child then toggle ip forward on
     if (leases && leases->child && leases->child->child) {
-      update_leases(json_find_first_label(leases->child->child, "leases"));
+      syslog(LOG_DEBUG, "Save leases %p", dhcp.leases);
+      pthread_mutex_lock(&dhcp.mutex);
+      dhcp.leases = json_find_first_label(leases->child->child, "leases");
+      pthread_mutex_unlock(&dhcp.mutex);
+      update_leases(dhcp.leases);
+    }
+    else {
+      pthread_mutex_lock(&dhcp.mutex);
+      dhcp.leases = NULL;
+      pthread_mutex_unlock(&dhcp.mutex);
     }
   }
   else {
@@ -700,6 +841,7 @@ bool iface_status_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
   object = json_parse_document(LSMessageGetPayload(msg));
   json_get_bool(object, "returnValue", &returnValue);
 
+  syslog(LOG_DEBUG, "iface status callback");
   if (returnValue) {
     if (is_subscription(msg))
       interface_status.subscribed = true;

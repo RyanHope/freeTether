@@ -242,9 +242,12 @@ MainAssistant.prototype.removeOldClients = function(clients) {
   var client = {};
   var found = false;
 
-  for (var i=0; i<this.clientListModel.items; i++) {
+  for (var i=0; i<this.clientListModel.items.length; i++) {
+    found = false;
     client = this.clientListModel.items[i];
-    for (var j=0; j<clients; j++) {
+    Mojo.Log.error("old client index " + i + " mac " + client.mac);
+    for (var j=0; j<clients.length; j++) {
+      Mojo.Log.error("current client index " + j + " mac " + clients[j].mac);
       if (client.mac === clients[j].mac) {
         found = true;
         break;
@@ -253,7 +256,7 @@ MainAssistant.prototype.removeOldClients = function(clients) {
 
     if (!found) {
       Mojo.Log.error("remove old client " + client.name);
-      this.clientListModel.items = this.clientListMode.items.without(client);
+      this.clientListModel.items = this.clientListModel.items.without(client);
     }
   }
 }

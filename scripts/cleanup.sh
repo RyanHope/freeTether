@@ -1,5 +1,6 @@
 #!/bin/sh
 
+echo 0 > /tmp/freetether/proc/sys/net/ipv4/ip_forward
 umount /tmp/freetether/proc
 rm -rf /tmp/freetether
 umount /proc/sys/net/ipv4/ip_forward
