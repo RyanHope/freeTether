@@ -36,7 +36,7 @@ HelpAssistant.prototype.setup = function() {
 	};
 	
 	this.supportModel.items.push({
-		text: $L("webOS-Internals Wiki"),
+		text: $L("WebOS Internals Wiki"),
 		detail: 'http://www.webos-internals.org/wiki/Application:FreeTether',
 		Class: 'img_web',
 		type: 'web'

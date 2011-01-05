@@ -45,7 +45,7 @@ WifiPrefsAssistant.prototype.setup = function() {
       label: 'Security',
       choices: [
           {label:'Open', value:'Open'},
-          {label:'WPA/WPA2 Personal', value:'wpa'},
+          {label:'WPA2 Personal', value:'WPA2Personal'},
       ],
       modelProperty: 'security'
     },

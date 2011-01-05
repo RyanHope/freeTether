@@ -3,7 +3,7 @@ function StartupAssistant(changelog)
 	this.justChangelog = changelog;
 	
     // on first start, this message is displayed, along with the current version message from below
-    this.firstMessage = $L("freeTether is an application that allows you to share your phones internet connection with other devices connected via USB, Bluetooth, or Wireless.");
+    this.firstMessage = $L("freeTether is an application that allows you to share your phone's internet connection with other devices connected via USB, Bluetooth, or WiFi.");
 	
     this.secondMessage = $L("freeTether");
 	
