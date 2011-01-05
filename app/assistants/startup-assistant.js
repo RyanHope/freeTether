@@ -72,7 +72,7 @@ StartupAssistant.prototype.setup = function()
 	}
 	else
 		{
-	    if (vers.isFirst || !vers.isFirst) 
+	    if (vers.isFirst) 
 		{
 		    this.titleContainer.innerHTML = $L("Welcome To freeTether");
 		}
