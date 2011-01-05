@@ -21,5 +21,9 @@
     {
         "scenes": "usbPrefs",
         "source": "app/assistants/usbPrefs-assistant.js"
+    },
+    {
+        "scenes": "btPrefs",
+        "source": "app/assistants/btPrefs-assistant.js"
     }
 ]
