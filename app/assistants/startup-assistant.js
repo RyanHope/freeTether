@@ -11,12 +11,12 @@ function StartupAssistant(changelog)
     this.newMessages =
 	[
     {
-      version: '0.99.8',
+      version: '0.99.9',
       log:
       [
         'Service fixes for race conditions and client list reporting',
         'Save and restore interface state',
-        'Fix spinner states and multi-interface toggling'
+        'Fix spinner states and multi-interface toggling',
         'Fix client list to correctly update hostnames'
       ]
     },
