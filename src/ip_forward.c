@@ -18,6 +18,22 @@ char *tmpProc;
 char *tmp_ip_forward;
 char *fake_ip_forward;
 
+void cleanup_fake_proc() {
+
+  umount(tmpProc);
+  umount(IP_FORWARD);
+
+  rmdir(tmpProc);
+  remove(fake_ip_forward);
+  rmdir(tmpDir);
+
+  free(fake_ip_forward);
+  free(tmp_ip_forward);
+  free(tmpProc);
+  free(tmpDir);
+
+}
+
 void ip_forward_cleanup() {
   monitor_ip_forward = 0;
   cleanup_fake_proc();
@@ -183,20 +199,4 @@ void setup_fake_proc() {
     mount(fake_ip_forward, IP_FORWARD, NULL, MS_BIND, NULL);
   if (!is_mounted(tmpProc))
     mount("proc", tmpProc, "proc", 0, NULL);
-}
-
-void cleanup_fake_proc() {
-
-  umount(tmpProc);
-  umount(IP_FORWARD);
-
-  rmdir(tmpProc);
-  remove(fake_ip_forward);
-  rmdir(tmpDir);
-
-  free(fake_ip_forward);
-  free(tmp_ip_forward);
-  free(tmpProc);
-  free(tmpDir);
-
 }

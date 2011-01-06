@@ -213,7 +213,6 @@ MainAssistant.prototype.addNewClients = function(clients) {
     }
 
     if (found) {
-      Mojo.Log.error("Found client type " + client.type + " hostname " + client.hostname + " mac " + client.mac);
       if (!this.clientListModel.items[j].type != client.type)
         this.clientListModel.items[j].type = client.type || "usb";
       if (this.clientListModel.items[j].hostname != client.hostname)
@@ -224,13 +223,11 @@ MainAssistant.prototype.addNewClients = function(clients) {
         this.clientListModel.items[j].ipv4 = client.ipv4;
     }
     else {
-      Mojo.Log.error("New client type " + client.type + " hostname " + client.hostname + " mac " + client.mac);
       var newClient = {};
       newClient.type = client.type || "usb";
       newClient.name = client.hostname || client.mac;
       newClient.mac = client.mac;
       newClient.ip = client.ipv4;
-      Mojo.Log.error("add new client " + newClient.name + " , type " + newClient.type);
       if (this.clientListModel.items.length && this.clientListModel.items[0].empty)
         this.clientListModel.items.clear();
       this.clientListModel.items.push(newClient);
@@ -245,9 +242,7 @@ MainAssistant.prototype.removeOldClients = function(clients) {
   for (var i=0; i<this.clientListModel.items.length; i++) {
     found = false;
     client = this.clientListModel.items[i];
-    Mojo.Log.error("old client index " + i + " mac " + client.mac);
     for (var j=0; j<clients.length; j++) {
-      Mojo.Log.error("current client index " + j + " mac " + clients[j].mac);
       if (client.mac === clients[j].mac) {
         found = true;
         break;
@@ -255,7 +250,6 @@ MainAssistant.prototype.removeOldClients = function(clients) {
     }
 
     if (!found) {
-      Mojo.Log.error("remove old client " + client.name);
       this.clientListModel.items = this.clientListModel.items.without(client);
     }
   }
@@ -326,8 +320,6 @@ MainAssistant.prototype.handleSysInfo = function(payload) {
     this.ifToggle[ifType].value = false;
   }, this);
   
-  Mojo.Log.error("wifi spinning " + this.ifSpinner['wifi'].spinning);
-
   if (len > 0) {
     for (; i<len; i++) {
       ifType = payload.sysInfo.interfaces[i].type;
@@ -339,7 +331,6 @@ MainAssistant.prototype.handleSysInfo = function(payload) {
     }
   }
   
-  Mojo.Log.error("wifi spinning " + this.ifSpinner['wifi'].spinning);
   ['wifi','bluetooth','usb'].each(function(ifType){
     this.controller.modelChanged(this.ifSpinner[ifType], this);
     this.controller.modelChanged(this.ifToggle[ifType], this);

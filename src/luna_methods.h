@@ -37,13 +37,13 @@ do { \
       sub.token = 0; \
   } while (0)
 
-#define UPDATE_CLIENT(param) \
+#define UPDATE_CLIENT(name, param) \
   do { \
-    if (param && (!client->param || !strcmp(client->param, param))) { \
-      if (client->param) { \
-        free(client->param); \
+    if (param && (!client->name || !strcmp(client->name, param))) { \
+      if (client->name) { \
+        free(client->name); \
       } \
-      client->param = strdup(param); \
+      client->name = strdup(param); \
     } \
   } while (0)
 

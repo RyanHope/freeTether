@@ -1,6 +1,6 @@
 export APP_ID=$(shell grep id appinfo.json | cut -d\" -f4)
 VERSION=$(shell grep version appinfo.json | cut -d\" -f4)
-META_VERSION=
+META_VERSION=1
 ifeq ($(META_VERSION),)
 IPKG_VER=${VERSION}
 else
