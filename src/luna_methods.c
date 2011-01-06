@@ -288,7 +288,7 @@ struct interface *get_iface(char *type, char *ifname) {
     }
     iface = iface->next;
   }
-  syslog(LOG_DEBUG, "MUTEX ifaceInfo take give_iface");
+  syslog(LOG_DEBUG, "MUTEX ifaceInfo give get_iface");
   pthread_mutex_unlock(&ifaceInfo.mutex);
 
   return iface;
@@ -814,6 +814,7 @@ void add_bridge(struct interface *iface) {
   iface->link_state = UP;
   iface->bridge_state = BRIDGED;
   pthread_mutex_unlock(&iface->mutex);
+  sysinfo_response();
 
   if (ifaceInfo.ip_state != ASSIGNED) {
     syslog(LOG_DEBUG, "MUTEX ifaceInfo take ab");
@@ -949,15 +950,14 @@ bool delete_ap_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
   object = json_parse_document(LSMessageGetPayload(msg));
   json_get_bool(object, "returnValue", &returnValue);
 
-  if (returnValue) {
-    if (iface->start_state == WIFI_ENABLED) {
-      LSCall(priv_serviceHandle, "luna://com.palm.wifi/setstate", "{\"state\":\"enabled\"}", 
-          NULL, NULL, NULL, &lserror);
-    }
-    if (iface) {
-      LS_SUB_CANCEL(interface_status);
-      remove_iface(iface);
-    }
+  if (iface->start_state == WIFI_ENABLED) {
+    LSCall(priv_serviceHandle, "luna://com.palm.wifi/setstate", "{\"state\":\"enabled\"}",
+        NULL, NULL, NULL, &lserror);
+  }
+
+  if (iface) {
+    LS_SUB_CANCEL(interface_status);
+    remove_iface(iface);
   }
 
   return true;
@@ -1002,6 +1002,7 @@ int delete_ap(char *type, char *ifname) {
   struct interface *iface;
 
   iface = get_iface(type, ifname);
+  syslog(LOG_DEBUG, "delete ap iface %p", iface);
   if (!iface)
     return -1;
 
@@ -1012,6 +1013,7 @@ int delete_ap(char *type, char *ifname) {
   pthread_mutex_lock(&iface->mutex);
   iface->iface_state = DESTROY_REQUESTED;
   pthread_mutex_unlock(&iface->mutex);
+  sysinfo_response();
 
   LSCall(priv_serviceHandle, "luna://com.palm.wifi/deleteAP", payload, delete_ap_callback, 
       (void *)iface, NULL, &lserror);
@@ -1045,16 +1047,26 @@ bool interfaceRemove(LSHandle *sh, LSMessage *msg, void *ctx) {
     struct interface *iface = get_iface(type, ifname);
 
     if (!strcmp(type, "bluetooth")) {
-      syslog(LOG_DEBUG, "bt monitor start state was %d", iface->start_state);
-      if (iface->start_state == BT_DISABLED) {
+      pthread_mutex_lock(&iface->mutex);
+      iface->iface_state = DESTROY_REQUESTED;
+      pthread_mutex_unlock(&iface->mutex);
+      sysinfo_response();
+
+      syslog(LOG_DEBUG, "bt monitor start state was %d", (iface) ? iface->start_state : -1);
+      if (iface && iface->start_state == BT_DISABLED) {
         LSCall(priv_serviceHandle, "palm://com.palm.btmonitor/monitor/radiooff", "{}", 
             NULL, NULL, NULL, &lserror);
       }
       LS_SUB_CANCEL(bluetooth);
       LS_SUB_CANCEL(btmonitor);
     }
-    if (!strcmp(type, "usb"))
+    if (iface && !strcmp(type, "usb")) {
+      pthread_mutex_lock(&iface->mutex);
+      iface->iface_state = DESTROY_REQUESTED;
+      pthread_mutex_unlock(&iface->mutex);
+      sysinfo_response();
       set_usb_gadget_state(iface->start_state);
+    }
     remove_iface(iface);
   }
 
@@ -1118,8 +1130,7 @@ bool btmon_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
   LSErrorInit(&lserror);
   json_t *object;
   bool returnValue = false;
-  bool bt_disabled = *(bool *)ctx;
-  static struct interface *iface = NULL;
+  struct interface *iface = (struct interface *)ctx;
 
   object = json_parse_document(LSMessageGetPayload(msg));
   json_get_bool(object, "returnValue", &returnValue);
@@ -1140,20 +1151,10 @@ bool btmon_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
     json_get_string(object, "radio", &radio);
     json_get_string(object, "notification", &notification);
     syslog(LOG_DEBUG, "radio %s, notification %s", radio, notification);
-    if ((radio && !strcmp(radio, "turningon")) ||
-       (notification && !strcmp(notification, "notifnradioturningon"))) {
-      iface = request_interface("bluetooth", NULL, NULL);
-      pthread_mutex_lock(&iface->mutex);
-      iface->start_state = (bt_disabled) ? BT_DISABLED : BT_ENABLED;
-      pthread_mutex_unlock(&iface->mutex);
-      syslog(LOG_DEBUG, "interface requested %p", iface);
-    }
     if (!bluetooth.subscribed && 
         ((radio && !strcmp(radio, "on")) ||
          (notification && !strcmp(notification, "notifnradioon")))) {
       syslog(LOG_DEBUG, "radio on iface %p", iface);
-      if (!iface)
-        iface = request_interface("bluetooth", NULL, NULL);
       LS_PRIV_SUBSCRIBE("bluetooth/pan/subscribenotifications", bluetooth, (struct interface *)iface);
     }
     if ((radio && !strcmp(radio, "turningoff")) ||
@@ -1161,13 +1162,13 @@ bool btmon_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
       pthread_mutex_lock(&iface->mutex);
       iface->iface_state = DESTROY_REQUESTED;
       pthread_mutex_unlock(&iface->mutex);
+      sysinfo_response();
     }
     if ((radio && !strcmp(radio, "off")) ||
        (notification && !strcmp(notification, "notifnradiooff"))) {
       LS_SUB_CANCEL(bluetooth);
-      //LS_SUB_CANCEL(btmonitor);
+      LS_SUB_CANCEL(btmonitor);
       remove_iface(iface);
-      iface = NULL;
       sysinfo_response();
     }
   }
@@ -1253,6 +1254,7 @@ bool bt_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
       iface->iface_state = CREATED;
       iface->ifname = strdup(ifname);
       pthread_mutex_unlock(&iface->mutex);
+      sysinfo_response();
 
       if (iface->bridge_state != BRIDGED) {
         pthread_mutex_lock(&iface->mutex);
@@ -1262,7 +1264,6 @@ bool bt_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
       }
 
       update_clients(iface, json_find_first_label(object, "clientList"));
-      sysinfo_response();
     }
   }
   else {
@@ -1278,14 +1279,20 @@ bool enable_bt_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
   LSErrorInit(&lserror);
   json_t *object;
   static bool returnValue;
+  struct interface *iface;
 
   object = json_parse_document(LSMessageGetPayload(msg));
   json_get_bool(object, "returnValue", &returnValue);
 
   syslog(LOG_DEBUG, "enable bt return %d", returnValue);
-  // returnValue indicates whether bluetooth was off to start with
+
+  iface = request_interface("bluetooth", NULL, NULL);
+  pthread_mutex_lock(&iface->mutex);
+  iface->start_state = (returnValue) ? BT_DISABLED : BT_ENABLED;
+  pthread_mutex_unlock(&iface->mutex);
+
   if (!btmonitor.subscribed)
-    LS_PRIV_SUBSCRIBE("btmonitor/monitor/subscribenotifications", btmonitor, (void *)&returnValue);
+    LS_PRIV_SUBSCRIBE("btmonitor/monitor/subscribenotifications", btmonitor, (void *)iface);
 
   return true;
 }
@@ -1318,6 +1325,7 @@ void enable_usb(struct interface *iface) {
   iface->start_state = state;
   pthread_mutex_unlock(&iface->mutex);
 
+  sysinfo_response();
   add_bridge(iface);
 }
 

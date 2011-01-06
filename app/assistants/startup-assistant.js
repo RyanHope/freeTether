@@ -10,8 +10,24 @@ function StartupAssistant(changelog)
     // on new version start
     this.newMessages =
 	[
+    {
+      version: '0.99.8',
+      log:
+      [
+        'Service fixes for race conditions and client list reporting',
+        'Save and restore interface state',
+        'Fix spinner states and multi-interface toggling'
+      ]
+    },
+    {
+      version: '0.99.7',
+      log:
+      [
+        'Bluetooth PAN Profile'
+      ]
+    },
 		{
-			version: '1.0.0',
+			version: '0.99.6',
 			log:
 			[
 				'USB, Bluetooth and WiFi support',
