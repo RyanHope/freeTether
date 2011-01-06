@@ -989,6 +989,10 @@ bool create_ap_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
     }
   }
   else {
+    if (iface->start_state == WIFI_ENABLED) {
+      LSCall(priv_serviceHandle, "luna://com.palm.wifi/setstate", "{\"state\":\"enabled\"}",
+          NULL, NULL, NULL, &lserror);
+    }
     remove_iface(iface);
   }
 
@@ -1204,10 +1208,11 @@ bool disable_wifi_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
     if (!iface)
       return false;
 
-    if (errorText && !strcmp(errorText, "AlreadyDisabled"))
+    if (errorText && !strcmp(errorText, "AlreadyDisabled")) {
       pthread_mutex_lock(&iface->mutex);
       iface->start_state = WIFI_DISABLED;
       pthread_mutex_unlock(&iface->mutex);
+    }
 
     asprintf(&payload, "{\"SSID\": \"%s\", \"Security\": \"%s\"", ap->ssid, ap->security);
 
