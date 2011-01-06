@@ -51,6 +51,12 @@ struct wifi_ap {
   char *passphrase;
 };
 
+#define WIFI_ENABLED  0
+#define WIFI_DISABLED 1
+
+#define BT_ENABLED 0
+#define BT_DISABLED 1
+
 struct interface {
   char *ifname;
   IFACE_STATE iface_state;
@@ -58,6 +64,7 @@ struct interface {
   LINK_STATE link_state;
   struct wifi_ap *ap;
   char *type;
+  int start_state;
   pthread_mutex_t mutex;
   struct interface *next;
 };
