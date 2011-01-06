@@ -17,6 +17,7 @@ function StartupAssistant(changelog)
         'Service fixes for race conditions and client list reporting',
         'Save and restore interface state',
         'Fix spinner states and multi-interface toggling'
+        'Fix client list to correctly update hostnames'
       ]
     },
     {
