@@ -1,25 +1,3 @@
-function objectToString(o) {
-  var parse = function(_o) {
-    var a = [], t;
-    for(var p in _o) {
-      if(_o.hasOwnProperty(p)) {
-        t = _o[p];
-        if(t && typeof t == "object") {
-          a[a.length]= p + ":{ " + arguments.callee(t).join(", ") + "}";
-        } else {
-          if(typeof t == "string"){
-            a[a.length] = [ p+ ": \"" + t.toString() + "\"" ];
-          } else {
-            a[a.length] = [ p+ ": " + t.toString()];
-          }        
-        }
-      }
-    }
-    return a;
-  }
-  return "{" + parse(o).join(", ") + "}";  
-}
-
 function MainAssistant() {
 
   this.DEFAULT_NETWORK = 'freeTether';
@@ -29,9 +7,7 @@ function MainAssistant() {
   this.USB_IFNAME = "usb0:1";
 
   this.statusSubscription = null;
-    
-  this.panModel = {value: false};
-  
+     
   this.ifToggle = {
     wifi: {value: false},
     bluetooth: {value: false},
@@ -60,27 +36,13 @@ MainAssistant.prototype.setup = function() {
 	
 	this.connections = this.controller.get('connections');
   this.connections.style.display = 'none';
-  
-	this.options = this.controller.get('options');
-	this.options.style.display = 'none';
 	
 	this.controller.listen('wifi-row', Mojo.Event.tap, this.ifaceRowTapped.bindAsEventListener(this, 'wifiPrefs'));
+	this.controller.listen('bt-row', Mojo.Event.tap, this.ifaceRowTapped.bindAsEventListener(this, 'btPrefs'));
 	this.controller.listen('usb-row', Mojo.Event.tap, this.ifaceRowTapped.bindAsEventListener(this, 'usbPrefs'));
-	
-  this.panProfile          = this.controller.get('panProfile');
 
   this.clientList          = this.controller.get('clientList');
 	  
-  this.controller.setupWidget(
-    'panProfile',
-    {
-       trueLabel:  'Enabled',
-       falseLabel: 'Disabled',
-       modelProperty:  'value'
-    },
-    this.panModel
-  );
-	
 	this.controller.setupWidget(
 		'wifi',
 		{
@@ -160,18 +122,14 @@ MainAssistant.prototype.setup = function() {
 	this.controller.listen('bluetooth', Mojo.Event.propertyChange, this.toggleChangeHandler);
 	this.controller.listen('usb', Mojo.Event.propertyChange, this.toggleChangeHandler);
 	 
-  this.serviceStatusSubscription = service.monitorServer("org.webosinternals.freetether", this.server.bind(this));
-  this.sysInfoSubscription = service.getStatus({subscribe: true}, this.handleSysInfo.bind(this));
-  this.clientListSubscription = service.getClientList({subscribe: true}, this.handleClientList.bind(this));
-  this.btProfileSubscription = service.getPrefs({keys:['btprofiledisable'], subscribe: true}, this.updateBTProfile.bind(this));
-	this.ipForwardSubscription = service.getIPForward({subscribe: true}, this.handleIPForward.bind(this));
+  this.serviceStatusSubscription = FreeTetherService.monitorServer("org.webosinternals.freetether", this.server.bind(this));
+  this.sysInfoSubscription = FreeTetherService.getStatus({subscribe: true}, this.handleSysInfo.bind(this));
+  this.clientListSubscription = FreeTetherService.getClientList({subscribe: true}, this.handleClientList.bind(this));
+	this.ipForwardSubscription = FreeTetherService.getIPForward({subscribe: true}, this.handleIPForward.bind(this));
 	
 	this.controller.setupWidget('wifiSpinner', {}, this.ifSpinner.wifi);
 	this.controller.setupWidget('btSpinner', {}, this.ifSpinner.bluetooth);
 	this.controller.setupWidget('usbSpinner', {}, this.ifSpinner.usb);
-	
-  this.btGroup = this.controller.get('bt-group');
-  this.btGroup.style.display = 'none';
 	
 };
 
@@ -179,23 +137,6 @@ MainAssistant.prototype.server = function(payload) {
         for (p in payload) {
           Mojo.Log.error(p + " : " + payload[p]);
         }
-}
-
-MainAssistant.prototype.updateBTProfile = function(payload) {
-  this.panModel.value = true;
-  if (payload.returnValue) {
-    Mojo.Log.error(payload.btprofiledisable)
-    if (payload.btprofiledisable instanceof Array) {
-      for(var i = 0; i < payload.btprofiledisable.length; i++) {
-        if (payload.btprofiledisable[i] == 'PAN')
-          this.panModel.value = false;       
-      }
-    } else {
-      if (payload.btprofiledisable == 'PAN')
-        this.panModel.value = false;
-    }
-    this.controller.modelChanged(this.panModel, this);
-  }
 }
 
 MainAssistant.prototype.addNewClients = function(clients) {
@@ -347,23 +288,14 @@ MainAssistant.prototype.handleCommand = function(event) {
 			case 'toggles':
 				this.toggles.style.display = '';
 				this.connections.style.display = 'none';
-				this.options.style.display = 'none';
 				this.controller.sceneScroller.mojo.revealTop()
 				break;
 				
      case 'connections':
         this.toggles.style.display = 'none';
         this.connections.style.display = '';
-        this.options.style.display = 'none';
         this.controller.sceneScroller.mojo.revealTop()
         break;
-				
-			case 'options':
-				this.toggles.style.display = 'none';
-				this.connections.style.display = 'none';
-				this.options.style.display = '';
-				this.controller.sceneScroller.mojo.revealTop()
-				break;
 				
       case 'do-help':
         this.controller.stageController.pushScene('help');
@@ -397,7 +329,7 @@ MainAssistant.prototype.addInterface = function(type) {
       break;
   }
   
-  service.addInterface(payload);
+  FreeTetherService.addInterface(payload);
 }
 
 MainAssistant.prototype.removeInterface = function(type) {
@@ -416,7 +348,7 @@ MainAssistant.prototype.removeInterface = function(type) {
       break;
   }
 
-  service.removeInterface(payload);
+  FreeTetherService.removeInterface(payload);
 }
 
 MainAssistant.prototype.toggleChanged = function(event) {

@@ -33,12 +33,12 @@ UsbPrefsAssistant.prototype.setup = function() {
   );
   this.controller.listen('usbGadget', Mojo.Event.propertyChange, this.usbChangedHandler);
   
-  this.getUSBSubscription = service.getUSB({subscribe: true}, this.updateUSB.bind(this));
+  this.getUSBSubscription = FreeTetherService.getUSB({subscribe: true}, this.updateUSB.bind(this));
 
 };
 
 UsbPrefsAssistant.prototype.usbChanged = function(event) {
-  service.setUSB({'state':event.value});
+  FreeTetherService.setUSB({'state':event.value});
 }
 
 UsbPrefsAssistant.prototype.updateUSB = function(payload) {
