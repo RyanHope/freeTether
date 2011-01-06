@@ -156,8 +156,8 @@ MainAssistant.prototype.addNewClients = function(clients) {
     if (found) {
       if (!this.clientListModel.items[j].type != client.type)
         this.clientListModel.items[j].type = client.type || "usb";
-      if (this.clientListModel.items[j].hostname != client.hostname)
-        this.clientListModel.items[j].hostname = client.hostname || client.mac;
+      if (this.clientListModel.items[j].name != client.hostname)
+        this.clientListModel.items[j].name = client.hostname || client.mac;
       if (this.clientListModel.items[j].mac != client.mac)
         this.clientListModel.items[j].mac = client.mac;
       if (this.clientListModel.items[j].ipv4 != client.ipv4)
