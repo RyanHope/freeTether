@@ -197,7 +197,8 @@ MainAssistant.prototype.removeOldClients = function(clients) {
 }
 
 MainAssistant.prototype.handleClientList = function(payload) {
-  if (payload && payload.clients) {
+  Mojo.Log.error("CL " + objectToString(payload));
+  if (payload && payload.clients && payload.clients.length > 0) {
     this.addNewClients(payload.clients);
     this.removeOldClients(payload.clients);
   }

@@ -894,6 +894,9 @@ bool iface_status_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
 void remove_iface(struct interface *iface) {
   struct interface *iter;
 
+  remove_connections(iface);
+  clientlist_response();
+
   syslog(LOG_DEBUG, "MUTEX ifaceInfo take ri");
   pthread_mutex_lock(&ifaceInfo.mutex);
   iter = ifaceInfo.ifaces;
@@ -904,9 +907,6 @@ void remove_iface(struct interface *iface) {
     pthread_mutex_unlock(&ifaceInfo.mutex);
     return;
   }
-
-  remove_connections(iface);
-  clientlist_response();
 
   if (iter == iface) {
     ifaceInfo.ifaces = iface->next;
