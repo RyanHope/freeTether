@@ -11,6 +11,16 @@ function StartupAssistant(changelog)
     this.newMessages =
 	[
     {
+      version: '0.99.12',
+      log:
+      [
+        'Defaul to Open for WiFi Tethering',
+        'Styling tweaks',
+        'Show passphrase hint',
+        'Menu options for each interface', 
+      ]
+    },
+    {
       version: '0.99.11',
       log:
       [
