@@ -11,6 +11,14 @@ function StartupAssistant(changelog)
     this.newMessages =
 	[
     {
+      version: '0.99.11',
+      log:
+      [
+        'Add client info scene',
+        'End freeTether service on app close'
+      ]
+    },
+    {
       version: '0.99.10',
       log:
       [
