@@ -43,6 +43,17 @@
   background: url(../images/status-error.png) center center no-repeat;
 }
 
+.cfg-icon
+{
+  position: absolute;
+  float: right;
+  margin-right: 20px;
+  z-index: 11000;
+  width: 32px;
+  height: 32px;
+  background: url(../images/configure.png) center center no-repeat;
+}
+
 /*
  * Help Scene Styles
  */

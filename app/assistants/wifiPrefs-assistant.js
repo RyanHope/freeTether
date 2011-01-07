@@ -17,17 +17,13 @@ function WifiPrefsAssistant() {
     value: this.prefs.security,
     choices: []
   };
-  
-  Mojo.Log.error("@#@#@#@#@#@#@#@#@#@#@#@#@#@#@#@#@#@#@");
-  Mojo.Log.error(this.prefs.passphraseVisible);
-  Mojo.Log.error("@#@#@#@#@#@#@#@#@#@#@#@#@#@#@#@#@#@#@");
-  
+   
   this.passphraseModel =
   {
-    value: this.prefs.passphraseVisible ? this.prefs.passphrase : maskTxt(this.prefs.passphrase,this.masks[1]),
+    value: '',
     disabled: true,
   }
-  
+    
 }
 
 WifiPrefsAssistant.prototype.setup = function() {
@@ -41,6 +37,7 @@ WifiPrefsAssistant.prototype.setup = function() {
   this.securityRow              = this.controller.get('security-row');
   this.passphraseRow            = this.controller.get('passphrase-row');
   this.passphraseButton         = this.controller.get('passphraseButton');
+  this.passphraseHint           = this.controller.get('passphraseHint');
 
   this.securityChangedHandler   = this.securityChanged.bindAsEventListener(this);
   this.textChanged              = this.textChanged.bindAsEventListener(this);
@@ -83,7 +80,6 @@ WifiPrefsAssistant.prototype.setup = function() {
     },
     this.passphraseModel
   );
-  Mojo.Event.listen(this.passphrase, Mojo.Event.tap, this.togglePassphrase.bindAsEventListener(this));
   
   this.controller.setupWidget(
     'passphraseButton',
@@ -95,7 +91,10 @@ WifiPrefsAssistant.prototype.setup = function() {
   );
   Mojo.Event.listen(this.passphraseButton, Mojo.Event.tap, this.setPassphrase.bindAsEventListener(this));
   
+  Mojo.Event.listen(this.passphraseRow, Mojo.Event.tap, this.togglePassphrase.bindAsEventListener(this));
+  
   this.updateSecurityWidgets();
+  this.updatePassphrase();
 
 };
 
@@ -119,9 +118,15 @@ WifiPrefsAssistant.prototype.textChanged = function(event) {
   this.cookie.put(this.prefs);
 }
 
-WifiPrefsAssistant.prototype.updatePassphrase = function(event) {
+WifiPrefsAssistant.prototype.updatePassphrase = function() {
 
-  this.passphraseModel.value = this.prefs.passphraseVisible ? this.prefs.passphrase : maskTxt(this.prefs.passphrase,this.masks[1]);
+  if (this.prefs.passphraseVisible) {
+    this.passphraseModel.value = this.prefs.passphrase;
+    this.passphraseHint.innerHTML = 'Tap to hide passphrase.';
+  } else {
+    this.passphraseModel.value = maskTxt(this.prefs.passphrase,this.masks[1]);
+    this.passphraseHint.innerHTML = 'Tap to show passphrase.';
+  }
   this.controller.modelChanged(this.passphraseModel, this);    
 
 }

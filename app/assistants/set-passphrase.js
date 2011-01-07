@@ -23,6 +23,7 @@ SetPassphraseAssistant.prototype.setup = function(widget) {
       preventResize: true,
       autoReplace: false,
       changeOnKeyPress: true,
+      textCase: Mojo.Widget.steModeLowerCase,
     },
     this.newpassModel
   );

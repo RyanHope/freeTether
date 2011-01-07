@@ -39,35 +39,43 @@
 			
 		</div>
 		
-		<div class="palm-group">
-	
-      <div class="palm-group-title">Status</div>
-        
-      <div class="palm-list">
-  	
-        <div class="palm-row single">
-          <div class="palm-row-wrapper">
-            <div class="palm-row-wrapper textfield-group" x-mojo-focus-highlight="true">
-              <div class="title">
-                <div class="label left">DHCP Server</div>
-                <div class="icon" x-mojo-tap-highlight='momentary'>
-                  <div id="dhcp-icon" class="icon status-offline"></div>
-                </div>
-              </div>
-              <div class="title">
-                <div class="label left">IP Forwarding</div>
-                <div class="icon" x-mojo-tap-highlight='momentary'>
-                  <div id="ip-forward-icon" class="icon status-offline"></div>
+		<div class='palm-info-text' style="text-align:center;">Tap row to bring up interface options.</div>
+		
+		<center>
+  		<table border=0 cellpadding=0 cellspacing=0 width="100%">
+        <tr>
+          <td width="50%">
+            <div class="palm-group unlabeled">
+              <div class="palm-list">
+                <div class="palm-row single">
+                  <div class="palm-row-wrapper">
+                  <center>
+                    <div class='palm-info-text' style="margin:0px;padding:0px;padding-top:6px;">DHCP Server</div>
+                    <div id="dhcp-icon" class="icon status-offline" style="margin:0px;padding:0px;margin-top:-12px;"></div>
+                  </center>
                 </div>
               </div>
             </div>
           </div>
-        </div>
-  
-      </div>
-      
-    </div>
-		
+          </td>
+          <td width="50%">
+            <div class="palm-group unlabeled">
+              <div class="palm-list">
+                <div class="palm-row single">
+                  <div class="palm-row-wrapper">
+                  <center>
+                    <div class='palm-info-text' style="margin:0px;padding:0px;padding-top:6px;">IP Forwarding</div>
+                    <div id="ip-forward-icon" class="icon status-offline" style="margin:0px;padding:0px;margin-top:-12px;"></div>
+                  </center>
+                </div>
+              </div>
+            </div>
+          </div>
+          </td>
+        </tr>
+      </table>
+    </center>
+    	
 	</div>
 	
 	
