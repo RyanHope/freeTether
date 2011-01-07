@@ -82,6 +82,18 @@ MainAssistant.prototype.setup = function() {
       visible: true,
       items: [
         {
+          label: "WiFi Prefs",
+          command: 'do-wifi'
+        },
+        {
+          label: "Bluetooth Prefs",
+          command: 'do-bt'
+        },
+        {
+          label: "USB Prefs",
+          command: 'do-usb'
+        },
+        {
           label: "Help",
           command: 'do-help'
         }
@@ -338,6 +350,19 @@ MainAssistant.prototype.handleCommand = function(event) {
       case 'do-help':
         this.controller.stageController.pushScene('help');
         break;
+        
+      case 'do-wifi':
+        this.controller.stageController.pushScene('wifiPrefs');
+        break;
+
+      case 'do-bt':
+        this.controller.stageController.pushScene('btPrefs');
+        break;
+
+      case 'do-usb':
+        this.controller.stageController.pushScene('usbPrefs');
+        break;
+      
 
 		}
 			
