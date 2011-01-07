@@ -3,6 +3,7 @@
 #include <string.h>
 #include <malloc.h>
 #include <syslog.h>
+#include <glib.h>
 #include "luna_methods.h"
 #include "luna_service.h"
 #include "freetether.h"
@@ -275,15 +276,15 @@ struct interface *get_iface(char *type, char *ifname) {
   iface = ifaceInfo.ifaces;
   while (iface) {
     if (ifname && type) {
-      if (!strcmp(iface->ifname, ifname) && !strcmp(iface->type, type))
+      if (iface->ifname && iface->type && !strcmp(iface->ifname, ifname) && !strcmp(iface->type, type))
         break;
     }
     else if (ifname) {
-      if (!strcmp(iface->ifname, ifname))
+      if (iface->ifname && !strcmp(iface->ifname, ifname))
         break;
     }
     else {
-      if (!strcmp(iface->type, type))
+      if (iface->type && !strcmp(iface->type, type))
         break;
     }
     iface = iface->next;
@@ -294,7 +295,20 @@ struct interface *get_iface(char *type, char *ifname) {
   return iface;
 }
 
-char *strlower(char *str) {
+static char *strupper(char *str) {
+  int i;
+
+  if (!str)
+    return;
+
+  for (i=0; i<strlen(str); i++) {
+    str[i] = toupper(str[i]);
+  }
+
+  return str;
+}
+
+static char *strlower(char *str) {
   int i;
 
   if (!str)
@@ -324,8 +338,6 @@ void check_for_lease(struct client *client) {
     }
   }
   pthread_mutex_unlock(&dhcp_leases.mutex);
-
-  clientlist_response();
 }
 
 struct client *add_connection(char *mac, char *hostname, char *ipv4, char *leaseTimeString, char *leaseExpiryString, 
@@ -345,7 +357,7 @@ struct client *add_connection(char *mac, char *hostname, char *ipv4, char *lease
 
   syslog(LOG_DEBUG, "add client %p", client);
 
-  client->mac = strdup(strlower(mac));
+  client->mac = strdup(strupper(mac));
   UPDATE_CLIENT(hostname, hostname);
   UPDATE_CLIENT(ipv4, ipv4);
   UPDATE_CLIENT(leaseTimeString, leaseTimeString);
@@ -366,11 +378,11 @@ struct client *add_connection(char *mac, char *hostname, char *ipv4, char *lease
   return client;
 }
 
-void update_connection(char *mac, char *hostname, char *ipv4, 
+bool update_connection(char *mac, char *hostname, char *ipv4, 
     char *leaseTimeString, char *leaseExpiryString, struct interface *iface) {
-
   bool found = false;
   struct client *client;
+  bool listChanged = false;
 
   syslog(LOG_DEBUG, "UPDATE CONNECTiON %s, %s, %s, %s, %s, %p\n", 
       mac, hostname, ipv4, leaseTimeString, leaseExpiryString, iface);
@@ -383,10 +395,26 @@ void update_connection(char *mac, char *hostname, char *ipv4,
   for (client = ifaceInfo.connections; client; client = client->next) {
     syslog(LOG_DEBUG, "client %p, mac %s", client, client->mac);
     if (client->mac && !strcmp(mac, client->mac)) {
-      UPDATE_CLIENT(hostname, hostname);
-      UPDATE_CLIENT(ipv4, ipv4);
-      UPDATE_CLIENT(leaseTimeString, leaseTimeString);
-      UPDATE_CLIENT(leaseExpiryString, leaseExpiryString);
+      if (hostname && client->hostname && strcmp(hostname, client->hostname)) {
+        FREE(client->hostname);
+        client->hostname = strdup(hostname);
+        listChanged = true;
+      }
+      if (ipv4 && client->ipv4 && strcmp(ipv4, client->ipv4)) {
+        FREE(client->ipv4);
+        client->ipv4 = strdup(ipv4);
+        listChanged = true;
+      }
+      if (leaseTimeString && client->leaseTimeString && strcmp(leaseTimeString, client->leaseTimeString)) {
+        FREE(client->leaseTimeString);
+        client->leaseTimeString = strdup(leaseTimeString);
+        listChanged = true;
+      }
+      if (leaseExpiryString && client->leaseExpiryString && strcmp(leaseExpiryString, client->leaseExpiryString)) {
+        FREE(client->leaseExpiryString);
+        client->leaseExpiryString = strdup(leaseExpiryString);
+        listChanged = true;
+      }
       if (iface && iface != client->iface)
         client->iface = iface;
       found = true;
@@ -409,8 +437,10 @@ void update_connection(char *mac, char *hostname, char *ipv4,
       syslog(LOG_DEBUG, "update lease for client %p", client);
       check_for_lease(client);
     }
-    clientlist_response();
+    listChanged = true;
   }
+
+  return listChanged;
 }
 
 static void free_client(struct client *client) {
@@ -468,10 +498,11 @@ void remove_connection(struct client *client) {
   }
 }
 
-void remove_old_clients(char *type, json_t *clientList) {
+bool remove_old_clients(char *type, json_t *clientList) {
   json_t *newClient;
   struct client *client;
   bool found = false;
+  bool listChanged = false;
 
   if (!type)
     return;
@@ -490,8 +521,10 @@ void remove_old_clients(char *type, json_t *clientList) {
         else
           json_get_string(newClient, "macAddress", &mac);
 
-        if (!strcmp(mac, client->mac))
+        if (!strcmp(mac, client->mac)) {
           found = true;
+          listChanged = true;
+        }
       }
 
       if (!found)
@@ -500,29 +533,38 @@ void remove_old_clients(char *type, json_t *clientList) {
   }
   syslog(LOG_DEBUG, "MUTEX ifaceInfo give roc");
   pthread_mutex_unlock(&ifaceInfo.mutex);
+
+  return listChanged;
 }
 
-void remove_connections(struct interface *iface) {
+bool remove_connections(struct interface *iface) {
   struct client *client;
+  bool listChanged = false;
 
   if (iface && iface->type) {
     syslog(LOG_DEBUG, "MUTEX ifaceInfo take rm_cs");
     pthread_mutex_lock(&ifaceInfo.mutex);
     for (client = ifaceInfo.connections; client; client = client->next) {
       if (client->iface && client->iface->type && !strcmp(iface->type, client->iface->type)) {
+        listChanged = true;
         remove_connection(client);
       }
     }
     syslog(LOG_DEBUG, "MUTEX ifaceInfo give rm_cs");
     pthread_mutex_unlock(&ifaceInfo.mutex);
   }
+
+  return listChanged;
 }
 
 void update_clients(struct interface *iface, json_t *object) {
+  bool listChanged = false;
+
   if (object && object->child && object->child->type == JSON_ARRAY && object->child->child) {
     json_t *client = object->child->child;
 
-    remove_old_clients(iface->type, client);
+    if (remove_old_clients(iface->type, client))
+      listChanged = true;
 
     while (client) {
       char *mac, *hostname = NULL;
@@ -536,20 +578,25 @@ void update_clients(struct interface *iface, json_t *object) {
         json_get_string(client, "hostName", &hostname);
       }
 
-      update_connection(mac, hostname, NULL, NULL, NULL, iface);
+      if (update_connection(mac, hostname, NULL, NULL, NULL, iface))
+        listChanged = true;
+
       client = client->next;
     }
   }
   else {
     syslog(LOG_DEBUG, "Remove all clients of iface type %s", (iface) ? iface->type : "?");
-    remove_connections(iface);
+    if (remove_connections(iface))
+      listChanged = true;
   }
 
-  clientlist_response();
+  if (listChanged)
+    clientlist_response();
 }
 
 void update_leases(json_t *object) {
   syslog(LOG_DEBUG, "update leases");
+  bool listChanged = false;
   if (object && object->child && object->child->type == JSON_ARRAY && object->child->child) {
     json_t *lease = NULL;
 
@@ -575,19 +622,21 @@ void update_leases(json_t *object) {
       if (!mac || !ipv4 || !leaseTimeString || !leaseExpiryString)
         continue;
 
-      update_connection(mac, hostname, ipv4, leaseTimeString, leaseExpiryString, NULL);
+      if (update_connection(mac, hostname, ipv4, leaseTimeString, leaseExpiryString, NULL))
+        listChanged = true;
       pthread_mutex_lock(&dhcp_leases.mutex);
       add_connection(mac, hostname, ipv4, leaseTimeString, leaseExpiryString, NULL, &dhcp_leases.leases);
       pthread_mutex_unlock(&dhcp_leases.mutex);
-      clientlist_response();
     }
   }
   else {
     pthread_mutex_lock(&dhcp_leases.mutex);
     free_connections(&dhcp_leases.leases);
     pthread_mutex_unlock(&dhcp_leases.mutex);
-    clientlist_response();
   }
+
+  if (listChanged)
+    clientlist_response();
 }
 
 bool is_subscription(LSMessage *msg) {
@@ -707,6 +756,7 @@ bool dhcp_final_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
       free(payload);
     }
     sysinfo_response();
+    syslog(LOG_DEBUG, "FINISHED, bye bye for now");
   }
   else {
     /* Fix the handling of return false everywhere */
@@ -895,8 +945,8 @@ bool iface_status_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
 void remove_iface(struct interface *iface) {
   struct interface *iter;
 
-  remove_connections(iface);
-  clientlist_response();
+  if (remove_connections(iface))
+    clientlist_response();
 
   syslog(LOG_DEBUG, "MUTEX ifaceInfo take ri");
   pthread_mutex_lock(&ifaceInfo.mutex);
@@ -1086,8 +1136,8 @@ struct interface *request_interface(char *type, char *ifname, struct wifi_ap *ap
   char *payload = NULL;
 
   syslog(LOG_DEBUG, "request interface %s, %s\n", type, ifname);
-  if (ifname && get_iface(NULL, ifname)) {
-    syslog(LOG_WARNING, "WARNING: Already requested interface %s, not setting up again\n", ifname);
+  if ((ifname && get_iface(NULL, ifname)) || (type && get_iface(type, NULL))) {
+    syslog(LOG_WARNING, "WARNING: Already requested interface type: %s, ifname: %s, not setting up again\n", type, ifname);
     return NULL;
   }
 
@@ -1472,6 +1522,18 @@ bool clientList(LSHandle *sh, LSMessage *msg, void *ctx) {
   return true;
 }
 
+bool stop(LSHandle *sh, LSMessage *msg, void *ctx) {
+  LSError lserror;
+  LSErrorInit(&lserror);
+
+  LSMessageReply(sh, msg, "{\"returnValue:\": true}", &lserror);
+
+  if (loop)
+    g_main_loop_quit(loop);
+
+  return true;
+}
+
 bool version(LSHandle *sh, LSMessage *msg, void *ctx) {
   LSError lserror;
   LSErrorInit(&lserror);
@@ -1491,6 +1553,7 @@ LSMethod luna_methods[] = {
   {"interfaceRemove", interfaceRemove},
   {"sysInfo", sysInfo},
   {"clientList", clientList},
+  {"stop", stop},
 #if 0
   {"configRead", configRead},
   {"configWrite", configWrite},

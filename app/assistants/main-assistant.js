@@ -41,7 +41,7 @@ MainAssistant.prototype.setup = function() {
 	this.controller.listen('bt-row', Mojo.Event.tap, this.ifaceRowTapped.bindAsEventListener(this, 'btPrefs'));
 	this.controller.listen('usb-row', Mojo.Event.tap, this.ifaceRowTapped.bindAsEventListener(this, 'usbPrefs'));
 
-  this.clientList          = this.controller.get('clientList');
+  this.clientList = this.controller.get('clientList');
 	  
 	this.controller.setupWidget(
 		'wifi',
@@ -112,6 +112,7 @@ MainAssistant.prototype.setup = function() {
   this.controller.setupWidget(
    'clientList',
     {
+      //swipeToDelete: true,
       itemTemplate: 'templates/device-item',
       listTemplate: 'templates/device-list',
     }, this.clientListModel);
@@ -121,6 +122,9 @@ MainAssistant.prototype.setup = function() {
 	this.controller.listen('wifi', Mojo.Event.propertyChange, this.toggleChangeHandler);
 	this.controller.listen('bluetooth', Mojo.Event.propertyChange, this.toggleChangeHandler);
 	this.controller.listen('usb', Mojo.Event.propertyChange, this.toggleChangeHandler);
+  this.controller.listen('clientList', Mojo.Event.listDelete, this.removeClient.bindAsEventListener(this));
+  this.clientList.observe(Mojo.Event.listTap, this.clientInfo.bindAsEventListener(this));
+
 	 
   this.serviceStatusSubscription = FreeTetherService.monitorServer("org.webosinternals.freetether", this.server.bind(this));
   this.sysInfoSubscription = FreeTetherService.getStatus({subscribe: true}, this.handleSysInfo.bind(this));
@@ -132,6 +136,15 @@ MainAssistant.prototype.setup = function() {
 	this.controller.setupWidget('usbSpinner', {}, this.ifSpinner.usb);
 	
 };
+
+MainAssistant.prototype.removeClient = function(event) {
+  Mojo.Log.error("REMOVE CLIENT " + event.item.name);
+}
+
+MainAssistant.prototype.clientInfo = function(event) {
+  if (!event.item.empty)
+    this.controller.stageController.pushScene('client', event.item);
+}
 
 MainAssistant.prototype.server = function(payload) {
         for (p in payload) {
@@ -147,13 +160,14 @@ MainAssistant.prototype.addNewClients = function(clients) {
     found = false;
     client = clients[i];
     for (var j=0; j<this.clientListModel.items.length; j++) {
-      if (client.mac === this.clientListModel.items[j].mac && client.ipv4) {
+      if (client.mac === this.clientListModel.items[j].mac) {
         found = true;
         break;
       }
     }
 
     if (found) {
+      Mojo.Log.error("update " + objectToString(client));
       if (!this.clientListModel.items[j].type != client.type)
         this.clientListModel.items[j].type = client.type || "usb";
       if (this.clientListModel.items[j].name != client.hostname)
@@ -162,13 +176,19 @@ MainAssistant.prototype.addNewClients = function(clients) {
         this.clientListModel.items[j].mac = client.mac;
       if (this.clientListModel.items[j].ipv4 != client.ipv4)
         this.clientListModel.items[j].ipv4 = client.ipv4;
+      if (this.clientListModel.items[j].leaseTime != client.leaseTime)
+        this.clientListModel.items[j].leaseTime = client.leaseTime;
+      if (this.clientListModel.items[j].leaseExpiry != client.leaseExpiry)
+        this.clientListModel.items[j].leaseExpiry = client.leaseExpiry;
     }
     else {
       var newClient = {};
       newClient.type = client.type || "usb";
       newClient.name = client.hostname || client.mac;
       newClient.mac = client.mac;
-      newClient.ip = client.ipv4;
+      newClient.ipv4 = client.ipv4;
+      newClient.leaseTime = client.leaseTime;
+      newClient.leaseExpiry = client.leaseExpiry;
       if (this.clientListModel.items.length && this.clientListModel.items[0].empty)
         this.clientListModel.items.clear();
       this.clientListModel.items.push(newClient);
@@ -234,6 +254,10 @@ MainAssistant.prototype.handleSysInfo = function(payload) {
   if (!payload || !payload.sysInfo)
     return;
   
+  if (!payload.returnValue) {
+    this.sysInfoSubscription = FreeTetherService.getStatus({subscribe: true}, this.handleSysInfo.bind(this));
+    return;
+  }
   var dhcpClass = '';
   switch (payload.sysInfo.stateDHCPServer) {
     case 'STOPPED':
@@ -389,5 +413,5 @@ MainAssistant.prototype.deactivate = function(event) {
 };
 
 MainAssistant.prototype.cleanup = function(event) {
-
+  FreeTetherService.stop();
 };

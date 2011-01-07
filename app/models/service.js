@@ -126,3 +126,14 @@ FreeTetherService.restartBluetooth = function(callback) {
 
   return request;
 };
+
+FreeTetherService.stop = function(callback) {
+  var request = new Mojo.Service.Request(FreeTetherService.ServiceUri, {
+    method: 'stop',
+    parameters: '{}',
+    onSuccess: callback,
+    onFailure: callback
+  });
+
+  return request;
+};
