@@ -128,5 +128,6 @@ int main(int argc, char **argv) {
     luna_service_start();
   }
 
+  cleanup();
   return 0;
 }

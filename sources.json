@@ -25,5 +25,9 @@
     {
         "scenes": "btPrefs",
         "source": "app/assistants/btPrefs-assistant.js"
+    },
+    {
+        "scenes": "client",
+        "source": "app/assistants/client-assistant.js"
     }
 ]

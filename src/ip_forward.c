@@ -13,25 +13,20 @@
 #define BUF_SIZE (32*(sizeof(struct inotify_event)+16))
 
 int monitor_ip_forward;
-char *tmpDir;
+static const char *tmpDir = "/tmp/freetether";
 char *tmpProc;
 char *tmp_ip_forward;
 char *fake_ip_forward;
 
 void cleanup_fake_proc() {
-
   umount(tmpProc);
   umount(IP_FORWARD);
-
   rmdir(tmpProc);
   remove(fake_ip_forward);
   rmdir(tmpDir);
-
   free(fake_ip_forward);
   free(tmp_ip_forward);
   free(tmpProc);
-  free(tmpDir);
-
 }
 
 void ip_forward_cleanup() {
@@ -181,8 +176,6 @@ void *ipmon_thread(void *ptr) {
 }
 
 void setup_fake_proc() {
-  tmpDir = "/tmp/freetether";
-
   asprintf(&tmpProc,"%s/proc", tmpDir);
   mkdir(tmpDir);
   mkdir(tmpProc);

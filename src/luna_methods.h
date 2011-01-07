@@ -40,7 +40,7 @@ do { \
 
 #define UPDATE_CLIENT(name, param) \
   do { \
-    if (param && (!client->name || !strcmp(client->name, param))) { \
+    if (param && (!client->name || strcmp(client->name, param))) { \
       if (client->name) { \
         free(client->name); \
       } \
