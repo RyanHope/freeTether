@@ -1,7 +1,7 @@
 function MainAssistant() {
 
   this.DEFAULT_NETWORK = 'freeTether';
-  this.DEFAULT_SECURITY = 'WPA2Personal';
+  this.DEFAULT_SECURITY = 'Open';
 	this.WIFI_IFNAME = "uap0";
   this.BT_IFNAME = "bsl0";
   this.USB_IFNAME = "usb0:1";
@@ -331,7 +331,7 @@ MainAssistant.prototype.addInterface = function(type) {
       payload[type].Security = prefs.get().security || this.DEFAULT_SECURITY;
       
       if (payload[type].Security !== 'Open')
-        payload[type].Passphrase = prefs.get().passphrase || randomPassword(10);
+        payload[type].Passphrase = prefs.get().passphrase || "";
 
       //payload[type].interfaceIdleTimeout = true;
       break;
