@@ -1,13 +1,32 @@
+function maskTxt(txt, char) {
+  var mask = "";
+  for (var i=0; i<txt.length; i++)
+    mask = mask + char;
+  return mask;
+}
+
 function WifiPrefsAssistant() {
 
   this.cookie = new preferenceCookie();
   this.prefs = this.cookie.get();
+  
+  this.masks = ['*','•'];
   
   this.securityModel =
   {
     value: this.prefs.security,
     choices: []
   };
+  
+  Mojo.Log.error("@#@#@#@#@#@#@#@#@#@#@#@#@#@#@#@#@#@#@");
+  Mojo.Log.error(this.prefs.passphraseVisible);
+  Mojo.Log.error("@#@#@#@#@#@#@#@#@#@#@#@#@#@#@#@#@#@#@");
+  
+  this.passphraseModel =
+  {
+    value: this.prefs.passphraseVisible ? this.prefs.passphrase : maskTxt(this.prefs.passphrase,this.masks[1]),
+    disabled: true,
+  }
   
 }
 
@@ -21,6 +40,7 @@ WifiPrefsAssistant.prototype.setup = function() {
   
   this.securityRow              = this.controller.get('security-row');
   this.passphraseRow            = this.controller.get('passphrase-row');
+  this.passphraseButton         = this.controller.get('passphraseButton');
 
   this.securityChangedHandler   = this.securityChanged.bindAsEventListener(this);
   this.textChanged              = this.textChanged.bindAsEventListener(this);
@@ -58,13 +78,22 @@ WifiPrefsAssistant.prototype.setup = function() {
     {
       multiline: false,
       enterSubmits: false,
-      modelProperty: 'passphrase',
       textCase: Mojo.Widget.steModeLowerCase,
       focusMode: Mojo.Widget.focusSelectMode
     },
-    this.prefs
+    this.passphraseModel
   );
-  Mojo.Event.listen(this.passphrase, Mojo.Event.propertyChange, this.textChanged);
+  Mojo.Event.listen(this.passphrase, Mojo.Event.tap, this.togglePassphrase.bindAsEventListener(this));
+  
+  this.controller.setupWidget(
+    'passphraseButton',
+    {},
+    {
+      label : "Set Passphrase",
+      disabled: false
+    }
+  );
+  Mojo.Event.listen(this.passphraseButton, Mojo.Event.tap, this.setPassphrase.bindAsEventListener(this));
   
   this.updateSecurityWidgets();
 
@@ -88,6 +117,36 @@ WifiPrefsAssistant.prototype.securityChanged = function(event) {
 
 WifiPrefsAssistant.prototype.textChanged = function(event) {
   this.cookie.put(this.prefs);
+}
+
+WifiPrefsAssistant.prototype.updatePassphrase = function(event) {
+
+  this.passphraseModel.value = this.prefs.passphraseVisible ? this.prefs.passphrase : maskTxt(this.prefs.passphrase,this.masks[1]);
+  this.controller.modelChanged(this.passphraseModel, this);    
+
+}
+
+WifiPrefsAssistant.prototype.togglePassphrase = function(event) {
+
+  this.prefs.passphraseVisible = !this.prefs.passphraseVisible;
+  this.updatePassphrase();
+  this.cookie.put(this.prefs); 
+
+}
+
+WifiPrefsAssistant.prototype.setPassphrase = function(event) {
+
+  this.controller.showDialog({
+    template: 'templates/passphrase',
+    assistant: new SetPassphraseAssistant(this)
+  });
+
+}
+
+WifiPrefsAssistant.prototype.setNewPassphrase = function(pass) {
+  this.prefs.passphrase = pass;
+  this.updatePassphrase();
+  this.cookie.put(this.prefs); 
 }
 
 WifiPrefsAssistant.prototype.activate = function(event) {

@@ -1,6 +1,10 @@
 {
 	"id": "org.webosinternals.freetether",
+<<<<<<< HEAD
 	"version": "0.99.11",
+=======
+	"version": "0.99.10",
+>>>>>>> parent of 3a7ed19... Revert "lots of passphrase related changes" <- since no one like it
 	"vendor": "WebOS Internals",
 	"type": "web",
 	"main": "index.html",
