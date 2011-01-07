@@ -11,7 +11,6 @@ function StartupAssistant(changelog)
     this.newMessages =
 	[
     {
-<<<<<<< HEAD
       version: '0.99.11',
       log:
       [
@@ -20,8 +19,6 @@ function StartupAssistant(changelog)
       ]
     },
     {
-=======
->>>>>>> parent of 3a7ed19... Revert "lots of passphrase related changes" <- since no one like it
       version: '0.99.10',
       log:
       [
