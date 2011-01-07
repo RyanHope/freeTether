@@ -1,6 +1,7 @@
 [
     {"source": "app/models/service.js"},
     {"source": "app/models/cookie.js"},
+    {"source": "app/assistants/set-passphrase.js"},
     {"source": "app/assistants/stage-assistant.js"},
     {
         "scenes": "help",

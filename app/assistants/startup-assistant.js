@@ -11,6 +11,16 @@ function StartupAssistant(changelog)
     this.newMessages =
 	[
     {
+      version: '0.99.10',
+      log:
+      [
+        'Default to WPA for WiFi Tethering',
+        'Provide default passphrase',
+        'Enforce min passphrase length',
+        'Random passphrase generator'
+      ]
+    },
+    {
       version: '0.99.9',
       log:
       [
