@@ -40,6 +40,7 @@ MainAssistant.prototype.setup = function() {
 	this.controller.listen('wifi-row', Mojo.Event.tap, this.ifaceRowTapped.bindAsEventListener(this, 'wifiPrefs'));
 	this.controller.listen('bt-row', Mojo.Event.tap, this.ifaceRowTapped.bindAsEventListener(this, 'btPrefs'));
 	this.controller.listen('usb-row', Mojo.Event.tap, this.ifaceRowTapped.bindAsEventListener(this, 'usbPrefs'));
+	this.controller.listen('dhcp-row', Mojo.Event.tap, this.ifaceRowTapped.bindAsEventListener(this, 'tcpPrefs'));
 
   this.clientList = this.controller.get('clientList');
 	  
@@ -92,6 +93,10 @@ MainAssistant.prototype.setup = function() {
         {
           label: "USB Prefs",
           command: 'do-usb'
+        },
+        {
+          label: "TCP/IP Prefs",
+          command: 'do-tcp'
         },
         {
           label: "Help",
@@ -363,7 +368,10 @@ MainAssistant.prototype.handleCommand = function(event) {
         this.controller.stageController.pushScene('usbPrefs');
         break;
       
-
+      case 'do-tcp':
+        this.controller.stageController.pushScene('tcpPrefs');
+        break;
+        
 		}
 			
 	}

@@ -28,7 +28,12 @@ preferenceCookie.prototype.get = function(reload)
 				network:                'freeTether',
 				passphrase:             randomPassword(10),
 				passphraseVisible:      false,
-				security:               'WPA2Personal'
+				security:               'Open',
+				gateway:                '10.1.1.11',
+				subnet:                 '255.255.255.0',
+				dhcpStart:              '10.1.1.50',
+				dhcpLeases:             15,
+				leaseTime:              7200
 				
 			};
 			
