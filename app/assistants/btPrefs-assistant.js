@@ -1,6 +1,12 @@
 function BtPrefsAssistant() {
 
-  this.panModel = {value: false};
+  this.cookie = new preferenceCookie();
+  this.prefs = this.cookie.get();
+
+  this.panModel = {
+    value: false,
+    disabled: this.prefs.noEditBT
+  };
 
 }
 
@@ -56,7 +62,6 @@ BtPrefsAssistant.prototype.activate = function(event) {
 };
 
 BtPrefsAssistant.prototype.deactivate = function(event) {
-  var tmp = prefs.get(true);
 };
 
 BtPrefsAssistant.prototype.cleanup = function(event) {

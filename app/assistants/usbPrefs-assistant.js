@@ -13,7 +13,10 @@ function UsbPrefsAssistant() {
   if (Mojo.Environment.DeviceInfo.platformVersionMajor == 2)
     this.usbChoices.push({label:$L('PASSTHRU + NOVACOM'),value:6})
   
-  this.usbModel = {value: 0}; 
+  this.usbModel = {
+    value: 0,
+    disabled: this.prefs.noEditUSB
+  }; 
 
 }
 
@@ -52,7 +55,7 @@ UsbPrefsAssistant.prototype.activate = function(event) {
 };
 
 UsbPrefsAssistant.prototype.deactivate = function(event) {
-  var tmp = prefs.get(true);
+  var tmp = this.cookie.get(true);
 };
 
 UsbPrefsAssistant.prototype.cleanup = function(event) {

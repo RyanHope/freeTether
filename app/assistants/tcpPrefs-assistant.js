@@ -14,7 +14,8 @@ TcpPrefsAssistant.prototype.setup = function() {
       enterSubmits: false,
       modelProperty: 'gateway',
       textCase: Mojo.Widget.steModeLowerCase,
-      focusMode: Mojo.Widget.focusSelectMode
+      focusMode: Mojo.Widget.focusSelectMode,
+      disabledProperty: 'noEditIP'
     },
     this.prefs
   );
@@ -26,7 +27,8 @@ TcpPrefsAssistant.prototype.setup = function() {
       enterSubmits: false,
       modelProperty: 'subnet',
       textCase: Mojo.Widget.steModeLowerCase,
-      focusMode: Mojo.Widget.focusSelectMode
+      focusMode: Mojo.Widget.focusSelectMode,
+      disabledProperty: 'noEditIP'
     },
     this.prefs
   );
@@ -38,7 +40,8 @@ TcpPrefsAssistant.prototype.setup = function() {
       enterSubmits: false,
       modelProperty: 'dhcpStart',
       textCase: Mojo.Widget.steModeLowerCase,
-      focusMode: Mojo.Widget.focusSelectMode
+      focusMode: Mojo.Widget.focusSelectMode,
+      disabledProperty: 'noEditIP'
     },
     this.prefs
   );
@@ -50,7 +53,8 @@ TcpPrefsAssistant.prototype.setup = function() {
       enterSubmits: false,
       modelProperty: 'dhcpLeases',
       textCase: Mojo.Widget.steModeLowerCase,
-      focusMode: Mojo.Widget.focusSelectMode
+      focusMode: Mojo.Widget.focusSelectMode,
+      disabledProperty: 'noEditIP'
     },
     this.prefs
   );
@@ -62,7 +66,8 @@ TcpPrefsAssistant.prototype.setup = function() {
       enterSubmits: false,
       modelProperty: 'leaseTime',
       textCase: Mojo.Widget.steModeLowerCase,
-      focusMode: Mojo.Widget.focusSelectMode
+      focusMode: Mojo.Widget.focusSelectMode,
+      disabledProperty: 'noEditIP'
     },
     this.prefs
   );

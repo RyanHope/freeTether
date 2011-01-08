@@ -1,5 +1,8 @@
 function MainAssistant() {
 
+  this.cookie = new preferenceCookie();
+  this.prefs = this.cookie.get();
+
   this.DEFAULT_NETWORK = 'freeTether';
   this.DEFAULT_SECURITY = 'Open';
 	this.WIFI_IFNAME = "uap0";
@@ -7,7 +10,7 @@ function MainAssistant() {
   this.USB_IFNAME = "usb0:1";
 
   this.statusSubscription = null;
-     
+      
   this.ifToggle = {
     wifi: {value: false},
     bluetooth: {value: false},
@@ -293,6 +296,7 @@ MainAssistant.prototype.handleSysInfo = function(payload) {
   }
   this.dhcpIcon.className = dhcpClass;
  
+  var enabledCount = 0;
   var interfaces = ['wifi','bluetooth','usb'];
   var len = payload.sysInfo.interfaces.length;
   var ifaces = {};
@@ -331,6 +335,28 @@ MainAssistant.prototype.handleSysInfo = function(payload) {
     this.controller.modelChanged(this.ifSpinner[ifType], this);
     this.controller.modelChanged(this.ifToggle[ifType], this);
   }, this);
+  
+  if (this.ifToggle['wifi'].value || this.ifToggle['bluetooth'].value || this.ifToggle['usb'].value)
+    this.prefs.noEditIP = true;
+  else
+    this.prefs.noEditIP = false;
+    
+  if (this.ifToggle['wifi'].value)
+    this.prefs.noEditWiFi = true;
+  else
+    this.prefs.noEditWiFi = false;
+    
+  if (this.ifToggle['bluetooth'].value)
+    this.prefs.noEditBT = true;
+  else
+    this.prefs.noEditBT = false;
+    
+  if (this.ifToggle['usb'].value)
+    this.prefs.noEditUSB = true;
+  else
+    this.prefs.noEditUSB = false;
+    
+  this.cookie.put(this.prefs);
 
 }
 
@@ -384,12 +410,12 @@ MainAssistant.prototype.addInterface = function(type) {
 
   switch(type) {
     case 'wifi':
-      payload[type].SSID = prefs.get().network || this.DEFAULT_NETWORK;
-      payload[type].Security = prefs.get().security || this.DEFAULT_SECURITY;
+      payload[type].SSID = this.prefs.network || this.DEFAULT_NETWORK;
+      payload[type].Security = this.prefs.security || this.DEFAULT_SECURITY;
       
       // THIS NEEDS TO BE FIXED
       if (payload[type].Security !== 'Open') 
-        payload[type].Passphrase = prefs.get().passphrase || "";
+        payload[type].Passphrase = this.prefs.passphrase || "";
 
       //payload[type].interfaceIdleTimeout = true;
       break;
@@ -425,7 +451,7 @@ MainAssistant.prototype.removeInterface = function(type) {
 
 MainAssistant.prototype.toggleChanged = function(event) {
 
-  if (event.value) 
+  if (event.value)
     this.addInterface(event.target.id);
   else
     this.removeInterface(event.target.id);
@@ -443,7 +469,7 @@ MainAssistant.prototype.activate = function(event) {
 };
 
 MainAssistant.prototype.deactivate = function(event) {
-
+  var tmp = this.cookie.get(true);
 };
 
 MainAssistant.prototype.cleanup = function(event) {

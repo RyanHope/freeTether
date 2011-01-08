@@ -33,7 +33,12 @@ preferenceCookie.prototype.get = function(reload)
 				subnet:                 '255.255.255.0',
 				dhcpStart:              '10.1.1.50',
 				dhcpLeases:             15,
-				leaseTime:              7200
+				leaseTime:              7200,
+				
+				noEditIP:               false,
+				noEditWiFi:             false,
+				noEditBT:               false,
+				noEditUSB:              false,
 				
 			};
 			

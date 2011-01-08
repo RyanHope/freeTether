@@ -50,7 +50,8 @@ WifiPrefsAssistant.prototype.setup = function() {
       hintText: 'Required',
       modelProperty: 'network',
       textCase: Mojo.Widget.steModeLowerCase,
-      focusMode: Mojo.Widget.focusSelectMode
+      focusMode: Mojo.Widget.focusSelectMode,
+      disabledProperty: 'noEditWiFi'
     },
     this.prefs
   );
@@ -64,7 +65,8 @@ WifiPrefsAssistant.prototype.setup = function() {
           {label:'Open', value:'Open'},
           {label:'WPA2 Personal', value:'WPA2Personal'},
       ],
-      modelProperty: 'security'
+      modelProperty: 'security',
+      disabledProperty: 'noEditWiFi'
     },
     this.prefs
   );
@@ -76,17 +78,18 @@ WifiPrefsAssistant.prototype.setup = function() {
       multiline: false,
       enterSubmits: false,
       textCase: Mojo.Widget.steModeLowerCase,
-      focusMode: Mojo.Widget.focusSelectMode
+      focusMode: Mojo.Widget.focusSelectMode,
     },
     this.passphraseModel
   );
   
   this.controller.setupWidget(
     'passphraseButton',
-    {},
+    {
+    },
     {
       label : "Set Passphrase",
-      disabled: false
+      disabled: this.prefs.noEditWiFi
     }
   );
   Mojo.Event.listen(this.passphraseButton, Mojo.Event.tap, this.setPassphrase.bindAsEventListener(this));
@@ -158,7 +161,7 @@ WifiPrefsAssistant.prototype.activate = function(event) {
 };
 
 WifiPrefsAssistant.prototype.deactivate = function(event) {
-  var tmp = prefs.get(true);
+  var tmp = this.cookie.get(true);
 };
 
 WifiPrefsAssistant.prototype.cleanup = function(event) {
