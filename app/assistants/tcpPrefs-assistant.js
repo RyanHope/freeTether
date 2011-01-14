@@ -78,8 +78,10 @@ TcpPrefsAssistant.prototype.activate = function(event) {
 };
 
 TcpPrefsAssistant.prototype.deactivate = function(event) {
-  var tmp = prefs.get(true);
+  //var tmp = this.cookie.get(true);
+  this.cookie.put(this.prefs); 
 };
 
 TcpPrefsAssistant.prototype.cleanup = function(event) {
+  FreeTetherService.setIP(this.prefs.gateway, this.prefs.subnet, this.prefs.dhcpStart, this.prefs.dhcpLeases, this.prefs.leaseTime);
 };

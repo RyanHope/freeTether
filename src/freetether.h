@@ -79,6 +79,8 @@ struct iface_info {
   char *ip;
   char *subnet;
   char *poolstart;
+  int maxLeases;
+  int leaseTime;
   IP_STATE ip_state;
   DHCP_STATE dhcp_state;
   struct interface *ifaces;

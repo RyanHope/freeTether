@@ -28,6 +28,8 @@ static int sys_info_init() {
   strcpy(ifaceInfo.subnet, DEFAULT_SUBNET);
   ifaceInfo.poolstart = malloc(strlen(DEFAULT_POOLSTART) + 1);
   strcpy(ifaceInfo.poolstart, DEFAULT_POOLSTART);
+  ifaceInfo.maxLeases = 15;
+  ifaceInfo.leaseTime = 7200;
 
   return 0;
 }

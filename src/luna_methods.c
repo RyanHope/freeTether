@@ -4,6 +4,7 @@
 #include <malloc.h>
 #include <syslog.h>
 #include <glib.h>
+#include <netinet/in.h>
 #include "luna_methods.h"
 #include "luna_service.h"
 #include "freetether.h"
@@ -140,10 +141,13 @@ static char *generate_sysinfo_json() {
         "\"IPv4Address\": \"%s\", "\
         "\"IPv4Subnet\": \"%s\", "\
         "\"IPv4PoolStart\": \"%s\", "\
+        "\"MaxLeases\": %d, "\
+        "\"LeaseTime\": %d, "\
         "\"stateIPv4\": \"%s\", "\
         "\"stateDHCPServer\": \"%s\", "\
         "\"interfaces\": [",
-        ifaceInfo.bridge, ifaceInfo.ip, ifaceInfo.subnet, ifaceInfo.poolstart, ipstate_str(), dhcpstate_str());
+        ifaceInfo.bridge, ifaceInfo.ip, ifaceInfo.subnet, ifaceInfo.poolstart, ifaceInfo.maxLeases, 
+        ifaceInfo.leaseTime, ipstate_str(), dhcpstate_str());
 
   while (iface) {
     asprintf(&payload, "%s { "\
@@ -809,6 +813,24 @@ bool netif_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
 
       // TODO: less hard coding
       if (ifaceInfo.dhcp_state == START_REQUESTED) {
+        char *payload;
+        asprintf(&payload, "{ "\
+            "\"interface\": \"%s\", "\
+            "\"mode\":\"server\", "\
+            "\"ipv4Address\":\"%s\", "\
+            "\"ipv4Subnet\":\"%s\", "\
+            "\"ipv4Router\":\"%s\", "\
+            "\"dnsServers\":[\"%s\"], "\
+            "\"ipv4RangeStart\":\"%s\", "\
+            "\"maxLeases\":%d, "\
+            "\"leaseTime\":%d}",
+            ifaceInfo.bridge, ifaceInfo.ip, ifaceInfo.subnet, ifaceInfo.ip, ifaceInfo.ip, ifaceInfo.poolstart, ifaceInfo.maxLeases, ifaceInfo.leaseTime);
+
+        LSCall(priv_serviceHandle, "luna://com.palm.dhcp/interfaceInitialize", payload,
+            dhcp_callback, NULL, NULL, &lserror);
+        free(payload);
+
+#if 0
         LSCall(priv_serviceHandle, "luna://com.palm.dhcp/interfaceInitialize", "{ " \
               "\"interface\":\"bridge0\", "\
               "\"mode\":\"server\", "\
@@ -820,6 +842,7 @@ bool netif_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
               "\"maxLeases\":15, "\
               "\"leaseTime\":7200}", 
               dhcp_callback, NULL, NULL, &lserror);
+#endif
       }
     }
   }
@@ -873,7 +896,30 @@ void add_bridge(struct interface *iface) {
     syslog(LOG_DEBUG, "MUTEX ifaceInfo give ab");
     pthread_mutex_unlock(&ifaceInfo.mutex);
 
-    // TODO: less hard coding
+    in_addr_t ip = inet_addr(ifaceInfo.ip);
+    in_addr_t subnet = inet_addr(ifaceInfo.subnet);
+    in_addr_t gateway = inet_addr(ifaceInfo.ip);
+
+    char *payload;
+    asprintf(&payload, "{ " \
+        "\"ifName\": \"%s\", " \
+        "\"networkUsage\": [\"private\"], " \
+        "\"networkTechnology\": \"unknown\", " \
+        "\"networkScope\": \"lan\", " \
+        "\"ifPriority\": 170, " \
+        "\"doBringUpIf\": true, " \
+        "\"ipv4\": " \
+        "{ " \
+            "\"ip\": \"0x%x\", " \
+            "\"netmask\": \"0x%x\", " \
+            "\"gateway\": \"0x%x\" " \
+        "}" \
+        "}",
+        ifaceInfo.bridge, ip, subnet, gateway);
+    LSCall(priv_serviceHandle, "luna://com.palm.netroute/addNetIf", payload,
+        netif_callback, NULL, NULL, &lserror);
+    free(payload);
+#if 0
     LSCall(priv_serviceHandle, "luna://com.palm.netroute/addNetIf", 
       "{ " \
         "\"ifName\": \"bridge0\", " \
@@ -890,6 +936,7 @@ void add_bridge(struct interface *iface) {
         "}" \
         "}",
         netif_callback, NULL, NULL, &lserror);
+#endif
   }
 }
 
@@ -1534,6 +1581,50 @@ bool stop(LSHandle *sh, LSMessage *msg, void *ctx) {
   return true;
 }
 
+bool setIP(LSHandle *sh, LSMessage *msg, void *ctx) {
+  LSError lserror;
+  LSErrorInit(&lserror);
+  json_t *object;
+  char *gateway = NULL;
+  char *subnet = NULL;
+  char *poolstart = NULL;
+  int maxLeases = 0;
+  int leaseTime = 0;
+ 
+  object = json_parse_document(LSMessageGetPayload(msg));
+  json_get_string(object, "gateway", &gateway);
+  json_get_string(object, "subnet", &subnet);
+  json_get_string(object, "poolstart", &poolstart);
+  json_get_int(object, "maxLeases", &maxLeases);
+  json_get_int(object, "leaseTime", &leaseTime);
+
+  // TODO: Error check the ipv4 formats
+  if (gateway) {
+    FREE(ifaceInfo.ip);
+    ifaceInfo.ip = strdup(gateway);
+  }
+
+  if (subnet) {
+    FREE(ifaceInfo.subnet);
+    ifaceInfo.subnet = strdup(subnet);
+  }
+
+  if (poolstart) {
+    FREE(ifaceInfo.poolstart);
+    ifaceInfo.poolstart = strdup(poolstart);
+  }
+
+  if (maxLeases)
+    ifaceInfo.maxLeases = maxLeases;
+
+  if (leaseTime)
+    ifaceInfo.leaseTime = leaseTime;
+
+  LSMessageReply(sh, msg, "{\"returnValue:\": true}", &lserror);
+  sysinfo_response();
+  return true;
+}
+
 bool version(LSHandle *sh, LSMessage *msg, void *ctx) {
   LSError lserror;
   LSErrorInit(&lserror);
@@ -1553,6 +1644,7 @@ LSMethod luna_methods[] = {
   {"interfaceRemove", interfaceRemove},
   {"sysInfo", sysInfo},
   {"clientList", clientList},
+  {"setIP", setIP},
   {"stop", stop},
 #if 0
   {"configRead", configRead},

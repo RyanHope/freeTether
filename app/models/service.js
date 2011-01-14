@@ -127,6 +127,22 @@ FreeTetherService.restartBluetooth = function(callback) {
   return request;
 };
 
+FreeTetherService.setIP = function(gateway, subnet, poolstart, maxLeases, leaseTime, callback) {
+  var request = new Mojo.Service.Request(FreeTetherService.ServiceUri, {
+    method: 'setIP',
+    parameters: {
+      gateway: gateway,
+      subnet: subnet,
+      poolstart: poolstart,
+      maxLeases: maxLeases,
+      leaseTime: leaseTime
+    },
+    onSuccess: callback,
+    onFailure: callback
+  });
+
+  return request;
+};
 FreeTetherService.stop = function(callback) {
   var request = new Mojo.Service.Request(FreeTetherService.ServiceUri, {
     method: 'stop',
