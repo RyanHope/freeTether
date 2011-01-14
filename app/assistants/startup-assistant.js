@@ -11,6 +11,14 @@ function StartupAssistant(changelog)
     this.newMessages =
 	[
     {
+      version: '0.99.13',
+      log:
+      [
+        'Disable settings while interface active',
+        'Add TCP/IP Preferences'
+      ]
+    },
+    {
       version: '0.99.12',
       log:
       [
