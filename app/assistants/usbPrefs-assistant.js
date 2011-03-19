@@ -55,7 +55,7 @@ UsbPrefsAssistant.prototype.activate = function(event) {
 };
 
 UsbPrefsAssistant.prototype.deactivate = function(event) {
-  var tmp = this.cookie.get(true);
+  var tmp = prefs.get(true);
 };
 
 UsbPrefsAssistant.prototype.cleanup = function(event) {

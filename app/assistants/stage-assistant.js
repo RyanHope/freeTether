@@ -1,3 +1,4 @@
+var prefs = new preferenceCookie();
 var vers = new versionCookie();
 
 function StageAssistant() {

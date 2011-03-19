@@ -78,8 +78,7 @@ TcpPrefsAssistant.prototype.activate = function(event) {
 };
 
 TcpPrefsAssistant.prototype.deactivate = function(event) {
-  //var tmp = this.cookie.get(true);
-  this.cookie.put(this.prefs); 
+  var tmp = prefs.get(true); 
 };
 
 TcpPrefsAssistant.prototype.cleanup = function(event) {

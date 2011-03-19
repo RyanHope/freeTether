@@ -138,7 +138,7 @@ WifiPrefsAssistant.prototype.togglePassphrase = function(event) {
 
   this.prefs.passphraseVisible = !this.prefs.passphraseVisible;
   this.updatePassphrase();
-  this.cookie.put(this.prefs); 
+  this.cookie.put(this.prefs);
 
 }
 
@@ -161,7 +161,7 @@ WifiPrefsAssistant.prototype.activate = function(event) {
 };
 
 WifiPrefsAssistant.prototype.deactivate = function(event) {
-  var tmp = this.cookie.get(true);
+  var tmp = prefs.get(true)
 };
 
 WifiPrefsAssistant.prototype.cleanup = function(event) {

@@ -1,8 +1,5 @@
 function MainAssistant() {
 
-  this.cookie = new preferenceCookie();
-  this.prefs = this.cookie.get();
-
   this.DEFAULT_NETWORK = 'freeTether';
   this.DEFAULT_SECURITY = 'Open';
 	this.WIFI_IFNAME = "uap0";
@@ -336,27 +333,31 @@ MainAssistant.prototype.handleSysInfo = function(payload) {
     this.controller.modelChanged(this.ifToggle[ifType], this);
   }, this);
   
+  cookieTMP = new preferenceCookie();
+  prefsTMP = cookieTMP.get();
+  
   if (this.ifToggle['wifi'].value || this.ifToggle['bluetooth'].value || this.ifToggle['usb'].value)
-    this.prefs.noEditIP = true;
+    prefsTMP.noEditIP = true;
   else
-    this.prefs.noEditIP = false;
+    prefsTMP.noEditIP = false;
     
   if (this.ifToggle['wifi'].value)
-    this.prefs.noEditWiFi = true;
+    prefsTMP.noEditWiFi = true;
   else
-    this.prefs.noEditWiFi = false;
+    prefsTMP.noEditWiFi = false;
     
   if (this.ifToggle['bluetooth'].value)
-    this.prefs.noEditBT = true;
+    prefsTMP.noEditBT = true;
   else
-    this.prefs.noEditBT = false;
+    prefsTMP.noEditBT = false;
     
   if (this.ifToggle['usb'].value)
-    this.prefs.noEditUSB = true;
+    prefsTMP.noEditUSB = true;
   else
-    this.prefs.noEditUSB = false;
+    prefsTMP.noEditUSB = false;
     
-  this.cookie.put(this.prefs);
+  cookieTMP.put(prefsTMP);
+  var tmp = prefs.get(true);
 
 }
 
@@ -410,12 +411,12 @@ MainAssistant.prototype.addInterface = function(type) {
 
   switch(type) {
     case 'wifi':
-      payload[type].SSID = this.prefs.network || this.DEFAULT_NETWORK;
-      payload[type].Security = this.prefs.security || this.DEFAULT_SECURITY;
+      payload[type].SSID = prefs.get().network || this.DEFAULT_NETWORK;
+      payload[type].Security = prefs.get().security || this.DEFAULT_SECURITY;
       
       // THIS NEEDS TO BE FIXED
       if (payload[type].Security !== 'Open') 
-        payload[type].Passphrase = this.prefs.passphrase || "";
+        payload[type].Passphrase = prefs.get().passphrase || "";
 
       //payload[type].interfaceIdleTimeout = true;
       break;

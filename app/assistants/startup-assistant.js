@@ -10,6 +10,13 @@ function StartupAssistant(changelog)
     // on new version start
     this.newMessages =
 	[
+	{
+      version: '0.99.14',
+      log:
+      [
+        'Fix cookie bug... saving settings works properly'
+      ]
+    },
     {
       version: '0.99.13',
       log:

@@ -62,6 +62,7 @@ BtPrefsAssistant.prototype.activate = function(event) {
 };
 
 BtPrefsAssistant.prototype.deactivate = function(event) {
+	var tmp = prefs.get(true);
 };
 
 BtPrefsAssistant.prototype.cleanup = function(event) {
