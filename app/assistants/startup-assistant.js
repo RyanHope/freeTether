@@ -11,6 +11,13 @@ function StartupAssistant(changelog)
     this.newMessages =
 	[
 	{
+      version: '0.99.15',
+      log:
+      [
+        'Fix TCP cookie bug.'
+      ]
+    },
+	{
       version: '0.99.14',
       log:
       [

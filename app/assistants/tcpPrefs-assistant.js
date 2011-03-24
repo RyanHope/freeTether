@@ -78,9 +78,7 @@ TcpPrefsAssistant.prototype.activate = function(event) {
 };
 
 TcpPrefsAssistant.prototype.deactivate = function(event) {
-  var tmp = prefs.get(true); 
-};
-
-TcpPrefsAssistant.prototype.cleanup = function(event) {
-  FreeTetherService.setIP(this.prefs.gateway, this.prefs.subnet, this.prefs.dhcpStart, this.prefs.dhcpLeases, this.prefs.leaseTime);
+  this.cookie.put(this.prefs);
+  var tmp = prefs.get(true);
+  FreeTetherService.setIP(prefs.get().gateway, prefs.get().subnet, prefs.get().dhcpStart, prefs.get().dhcpLeases, prefs.get().leaseTime);
 };
