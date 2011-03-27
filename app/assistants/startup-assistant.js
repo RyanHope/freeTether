@@ -11,6 +11,13 @@ function StartupAssistant(changelog)
     this.newMessages =
 	[
 	{
+      version: '1.0.0',
+      log:
+      [
+        'Move out of testing feed.'
+      ]
+    },
+	{
       version: '0.99.15',
       log:
       [

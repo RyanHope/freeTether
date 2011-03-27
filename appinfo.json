@@ -1,6 +1,6 @@
 {
 	"id": "org.webosinternals.freetether",
-	"version": "0.99.15",
+	"version": "1.0.0",
 	"vendor": "WebOS Internals",
 	"type": "web",
 	"main": "index.html",
