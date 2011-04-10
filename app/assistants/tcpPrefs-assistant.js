@@ -1,8 +1,29 @@
+function isValidIPAddress(ipaddr) {
+   var re = /^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/;
+   if (re.test(ipaddr)) {
+      var parts = ipaddr.split(".");
+      if (parseInt(parseFloat(parts[0])) == 0) { return false; }
+      for (var i=0; i<parts.length; i++) {
+         if (parseInt(parseFloat(parts[i])) > 255) { return false; }
+      }
+      return true;
+   } else {
+      return false;
+   }
+}
+
 function TcpPrefsAssistant() {
 
   this.cookie = new preferenceCookie();
   this.prefs = this.cookie.get();
-
+  
+  this.validIPs = {
+  	'ip-gateway': false,
+  	'ip-subnet': false,
+  	'ip-dhcp-start': false
+  }
+  
+  
 }
 
 TcpPrefsAssistant.prototype.setup = function() {
@@ -72,6 +93,13 @@ TcpPrefsAssistant.prototype.setup = function() {
     this.prefs
   );
   
+  this.controller.listen(this.controller.get('ip-gateway'), Mojo.Event.propertyChange, this.ipChanged.bindAsEventListener(this));
+  this.validIPs['ip-gateway'] = this.validateIP('ip-gateway', this.prefs.gateway)
+  this.controller.listen(this.controller.get('ip-subnet'), Mojo.Event.propertyChange, this.ipChanged.bindAsEventListener(this));
+  this.validIPs['ip-subnet'] = this.validateIP('ip-subnet', this.prefs.subnet)
+  this.controller.listen(this.controller.get('ip-dhcp-start'), Mojo.Event.propertyChange, this.ipChanged.bindAsEventListener(this));
+  this.validIPs['ip-dhcp-start'] = this.validateIP('ip-dhcp-start', this.prefs.dhcpStart)
+  
   this.helpTap = this.helpRowTapped.bindAsEventListener(this);
   this.controller.listen(this.controller.get('help-toggle'), Mojo.Event.tap, this.helpButtonTapped.bindAsEventListener(this));
   
@@ -80,6 +108,27 @@ TcpPrefsAssistant.prototype.setup = function() {
     this.controller.listen(helps[h], Mojo.Event.tap, this.helpTap);
   }
 
+};
+
+TcpPrefsAssistant.prototype.validateIP = function(elem, address) {
+	if (isValidIPAddress(address)) {
+		Mojo.Log.warn("!!!!!!!!!!!!!!!!! VALID !!!!!!!!!!!!!!!!!!!!");
+		if (this.controller.get(elem).hasClassName('invalid-ip')) {
+			this.controller.get(elem).removeClassName('invalid-ip');
+		}
+		return true
+	} else {
+		Mojo.Log.warn("!!!!!!!!!!!!!!!!! INVALID !!!!!!!!!!!!!!!!!!!!");
+		if (! this.controller.get(elem).hasClassName('invalid-ip')) {
+			this.controller.get(elem).addClassName('invalid-ip');
+		}
+		return false
+	}
+}
+
+TcpPrefsAssistant.prototype.ipChanged = function(event) {
+	elem = 'ip-' + event.property
+	this.validIPs[elem] = this.validateIP(elem, event.value)
 };
 
 TcpPrefsAssistant.prototype.activate = function(event) {

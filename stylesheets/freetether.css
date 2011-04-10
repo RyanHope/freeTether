@@ -43,6 +43,10 @@
   background: url(../images/status-error.png) center center no-repeat;
 }
 
+.invalid-ip {
+  color: crimson;
+}
+
 /*
  * Help Scene Styles
  */
