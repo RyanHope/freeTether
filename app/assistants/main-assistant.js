@@ -9,9 +9,9 @@ function MainAssistant() {
   this.statusSubscription = null;
       
   this.ifToggle = {
-    wifi: {value: false},
-    bluetooth: {value: false},
-    usb: {value: false}
+    wifi: {value: false, disabled: false},
+    bluetooth: {value: false, disabled: false},
+    usb: {value: false, disabled: false}
   }
   
   this.ifSpinner = {
@@ -49,7 +49,7 @@ MainAssistant.prototype.setup = function() {
 		{
       trueLabel:  'On',
       falseLabel: 'Off',
-      fieldName:  'value'
+      fieldName:  'value',
 		},
 		this.ifToggle.wifi
 	);
@@ -59,7 +59,7 @@ MainAssistant.prototype.setup = function() {
 		{
       trueLabel:  'On',
       falseLabel: 'Off',
-      fieldName:  'value'
+      fieldName:  'value',
 		},
 		this.ifToggle.bluetooth
 	);
@@ -69,7 +69,7 @@ MainAssistant.prototype.setup = function() {
 		{
       trueLabel:  'On',
       falseLabel: 'Off',
-      fieldName:  'value'
+      fieldName:  'value',
 		},
 		this.ifToggle.usb
 	);
@@ -466,11 +466,22 @@ MainAssistant.prototype.ifaceRowTapped = function(event, item) {
 }
 
 MainAssistant.prototype.activate = function(event) {
-
+	d = prefs.get().invalidTCP;
+	for (var i in this.ifToggle)
+		this.ifToggle[i]['disabled'] = d;
+	if (d) {
+		if (! this.controller.get('dhcp-server-txt').hasClassName('invalid')) {
+			this.controller.get('dhcp-server-txt').addClassName('invalid');
+		}
+	} else {
+		if (this.controller.get('dhcp-server-txt').hasClassName('invalid')) {
+			this.controller.get('dhcp-server-txt').removeClassName('invalid');
+		}
+	}
 };
 
 MainAssistant.prototype.deactivate = function(event) {
-  var tmp = this.cookie.get(true);
+  var tmp = prefs.get(true);
 };
 
 MainAssistant.prototype.cleanup = function(event) {

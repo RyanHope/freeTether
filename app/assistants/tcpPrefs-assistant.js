@@ -107,18 +107,18 @@ TcpPrefsAssistant.prototype.setup = function() {
   for (var h = 0; h < helps.length; h++) {
     this.controller.listen(helps[h], Mojo.Event.tap, this.helpTap);
   }
+  
+  this.controller.setInitialFocusedElement(null);
 
 };
 
 TcpPrefsAssistant.prototype.validateIP = function(elem, address) {
 	if (isValidIPAddress(address)) {
-		Mojo.Log.warn("!!!!!!!!!!!!!!!!! VALID !!!!!!!!!!!!!!!!!!!!");
 		if (this.controller.get(elem).hasClassName('invalid-ip')) {
 			this.controller.get(elem).removeClassName('invalid-ip');
 		}
 		return true
 	} else {
-		Mojo.Log.warn("!!!!!!!!!!!!!!!!! INVALID !!!!!!!!!!!!!!!!!!!!");
 		if (! this.controller.get(elem).hasClassName('invalid-ip')) {
 			this.controller.get(elem).addClassName('invalid-ip');
 		}
@@ -135,6 +135,11 @@ TcpPrefsAssistant.prototype.activate = function(event) {
 };
 
 TcpPrefsAssistant.prototype.deactivate = function(event) {
+  this.prefs.invalidTCP = false
+  for (var i in this.validIPs) {
+	if (this.validIPs[i] == false)
+	  this.prefs.invalidTCP = true;
+  }
   this.cookie.put(this.prefs);
   var tmp = prefs.get(true);
   FreeTetherService.setIP(prefs.get().gateway, prefs.get().subnet, prefs.get().dhcpStart, prefs.get().dhcpLeases, prefs.get().leaseTime);

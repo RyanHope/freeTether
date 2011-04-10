@@ -35,6 +35,8 @@ preferenceCookie.prototype.get = function(reload)
 				dhcpLeases:             15,
 				leaseTime:              7200,
 				
+				invalidTCP:				false,
+				
 				noEditIP:               false,
 				noEditWiFi:             false,
 				noEditBT:               false,

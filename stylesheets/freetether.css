@@ -47,6 +47,16 @@
   color: crimson;
 }
 
+.tcp {
+  margin:0px;
+  padding:0px;
+  padding-top:6px;
+}
+
+.palm-info-text.invalid {
+  color: crimson;
+}
+
 /*
  * Help Scene Styles
  */

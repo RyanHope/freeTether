@@ -106,6 +106,8 @@ WifiPrefsAssistant.prototype.setup = function() {
   for (var h = 0; h < helps.length; h++) {
     this.controller.listen(helps[h], Mojo.Event.tap, this.helpTap);
   }
+  
+  this.controller.setInitialFocusedElement(null);
 
 };
 
