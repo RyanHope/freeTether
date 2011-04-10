@@ -29,9 +29,9 @@ preferenceCookie.prototype.get = function(reload)
 				passphrase:             randomPassword(10),
 				passphraseVisible:      false,
 				security:               'Open',
-				gateway:                '10.1.1.11',
+				gateway:                '192.168.100.1',
 				subnet:                 '255.255.255.0',
-				dhcpStart:              '10.1.1.50',
+				dhcpStart:              '192.168.100.50',
 				dhcpLeases:             15,
 				leaseTime:              7200,
 				
