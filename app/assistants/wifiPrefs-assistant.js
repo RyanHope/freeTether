@@ -98,6 +98,14 @@ WifiPrefsAssistant.prototype.setup = function() {
   
   this.updateSecurityWidgets();
   this.updatePassphrase();
+  
+  this.helpTap = this.helpRowTapped.bindAsEventListener(this);
+  this.controller.listen(this.controller.get('help-toggle'), Mojo.Event.tap, this.helpButtonTapped.bindAsEventListener(this));
+  
+  var helps = this.controller.get('container').querySelectorAll('div.help-overlay');
+  for (var h = 0; h < helps.length; h++) {
+    this.controller.listen(helps[h], Mojo.Event.tap, this.helpTap);
+  }
 
 };
 
@@ -165,4 +173,34 @@ WifiPrefsAssistant.prototype.deactivate = function(event) {
 };
 
 WifiPrefsAssistant.prototype.cleanup = function(event) {
+};
+
+WifiPrefsAssistant.prototype.helpButtonTapped = function(event)
+{
+	if (this.controller.get('container').hasClassName('help'))
+	{
+		this.controller.get('container').removeClassName('help');
+		event.target.removeClassName('selected');
+	}
+	else
+	{
+		this.controller.get('container').addClassName('help');
+		event.target.addClassName('selected');
+	}
+};
+
+WifiPrefsAssistant.prototype.helpRowTapped = function(event)
+{
+	
+	event.stop();
+	event.stopPropagation();
+	event.preventDefault();
+	
+	var lookup = event.target.id.replace(/help-/, '');
+	var help = helpData.get(lookup);
+	
+	if (lookup && help)
+	{
+		this.controller.stageController.pushScene('help-data', help);
+	}
 };

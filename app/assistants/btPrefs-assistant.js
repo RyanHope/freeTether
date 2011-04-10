@@ -26,6 +26,14 @@ BtPrefsAssistant.prototype.setup = function() {
   this.controller.listen('panProfile', Mojo.Event.propertyChange, this.panChangeHandler);
   
   this.btProfileSubscription = FreeTetherService.getPrefs({keys:['btprofiledisable'], subscribe: true}, this.updateBTProfile.bind(this));
+  
+  this.helpTap = this.helpRowTapped.bindAsEventListener(this);
+  this.controller.listen(this.controller.get('help-toggle'), Mojo.Event.tap, this.helpButtonTapped.bindAsEventListener(this));
+  
+  var helps = this.controller.get('container').querySelectorAll('div.help-overlay');
+  for (var h = 0; h < helps.length; h++) {
+    this.controller.listen(helps[h], Mojo.Event.tap, this.helpTap);
+  }
 
 };
 
@@ -66,4 +74,34 @@ BtPrefsAssistant.prototype.deactivate = function(event) {
 };
 
 BtPrefsAssistant.prototype.cleanup = function(event) {
+};
+
+BtPrefsAssistant.prototype.helpButtonTapped = function(event)
+{
+	if (this.controller.get('container').hasClassName('help'))
+	{
+		this.controller.get('container').removeClassName('help');
+		event.target.removeClassName('selected');
+	}
+	else
+	{
+		this.controller.get('container').addClassName('help');
+		event.target.addClassName('selected');
+	}
+};
+
+BtPrefsAssistant.prototype.helpRowTapped = function(event)
+{
+	
+	event.stop();
+	event.stopPropagation();
+	event.preventDefault();
+	
+	var lookup = event.target.id.replace(/help-/, '');
+	var help = helpData.get(lookup);
+	
+	if (lookup && help)
+	{
+		this.controller.stageController.pushScene('help-data', help);
+	}
 };

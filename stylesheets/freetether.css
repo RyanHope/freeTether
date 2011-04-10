@@ -218,3 +218,144 @@
 {
   font-size: 15px;
 }
+
+/*
+ * Form Styles - Scene Inspecific
+ */
+.form .palm-row-wrapper .label.left
+{
+	padding-left: 6px;
+	-webkit-palm-mouse-target: ignore;
+}
+.form .palm-row-wrapper .sliderTitle
+{
+	padding-right: 22px;
+	line-height: 26px;
+	height: 26px;
+	vertical-align: middle;
+}
+.form .palm-row-wrapper .slider
+{
+	margin-top: -6px;
+	padding-bottom: 18px;
+}
+.form .palm-list-selector .label
+{
+	float: left;
+}
+.form .palm-list-selector .title
+{
+	text-align: right;
+}
+.form .noflip .palm-list-selector .label
+{
+	float: right;
+}
+.form .noflip .palm-list-selector .title
+{
+	text-align: left;
+}
+.form .textfield-group .hint-text
+{
+	color: #666;
+}
+body.palm-dark .form .textfield-group .hint-text
+{
+	color: #ccc;
+}
+.form .palm-group.disabled
+{
+	opacity: 0.35;
+}
+
+.form .palm-row .palm-row-wrapper
+{
+	position: relative;
+}
+.form .palm-row .palm-row-wrapper:not(.textfield-group)
+{
+	min-height: 53px;
+}
+.form .palm-row .palm-row-wrapper.textfield-group
+{
+	min-height: 23px;
+}
+.form .palm-row .palm-row-wrapper.textfield-group .help-overlay
+{
+	top: -13px;
+	left: -13px;
+	bottom: -11px;
+	right: -13px;
+}
+.form .palm-row .palm-row-wrapper .help-overlay
+{
+	display: none;
+	position: absolute;
+	z-index: 10000;
+	width: auto;
+	height: auto;
+	border: 20px;
+	top: 2px;
+	left: 2px;
+	right: 2px;
+	bottom: 4px;
+	-webkit-border-image: url(../images/palm-default/helprow.png) 20 20 20 20 stretch stretch;
+}
+.form .palm-row.first .palm-row-wrapper .help-overlay
+{
+	-webkit-border-image: url(../images/palm-default/helprow-first.png) 20 20 20 20 stretch stretch;
+}
+.form .palm-row.last .palm-row-wrapper .help-overlay
+{
+	-webkit-border-image: url(../images/palm-default/helprow-last.png) 20 20 20 20 stretch stretch;
+	bottom: 2px;
+}
+.form .palm-row.single .palm-row-wrapper .help-overlay
+{
+	-webkit-border-image: url(../images/palm-default/helprow-single.png) 20 20 20 20 stretch stretch;
+	bottom: 3px;
+}
+.form .palm-row.last .palm-row-wrapper.textfield-group .help-overlay,
+.form .palm-row.single .palm-row-wrapper.textfield-group .help-overlay
+{
+	bottom: -13px;
+}
+.form .palm-group
+{
+	position: relative;
+}
+.form .palm-group > .help-overlay
+{
+	display: none;
+	position: absolute;
+	z-index: 10000;
+	width: auto;
+	height: auto;
+	border: 20px;
+	top: -12px;
+	left: -14px;
+	bottom: -13px;
+	right: -13px;
+	-webkit-border-image: url(../images/palm-default/helprow-single.png) 20 20 20 20 stretch stretch;
+}
+.form.help .palm-row .palm-row-wrapper .help-overlay,
+.form.help .palm-group > .help-overlay
+{
+	display: block;
+}
+
+.form .help-toggle
+{
+	position: absolute;
+	right: 11px;
+	top: 11px;
+	width: 32px;
+	height: 32px;
+	background-position: 0px 0px;
+	background-repeat: no-repeat;
+	background-image: url(../images/palm-default/help-toggle.png);
+}
+.form .help-toggle.selected
+{
+	background-position: 0px -32px;
+}

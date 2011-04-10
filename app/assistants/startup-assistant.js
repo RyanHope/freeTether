@@ -11,10 +11,11 @@ function StartupAssistant(changelog)
     this.newMessages =
 	[
 	{
-      version: '1.0.1',
+      version: '1.1.0',
       log:
       [
-        'Set "default" gateway/router IP to 192.168.100.1'
+        'Set "default" gateway/router IP to 192.168.100.1',
+        'Add help overlay to all options',
       ]
     },
 	{

@@ -1,6 +1,7 @@
 [
     {"source": "app/models/service.js"},
     {"source": "app/models/cookie.js"},
+    {"source": "app/models/help.js"},
     {"source": "app/assistants/set-passphrase.js"},
     {"source": "app/assistants/stage-assistant.js"},
     {
@@ -34,5 +35,9 @@
     {
         "scenes": "tcpPrefs",
         "source": "app/assistants/tcpPrefs-assistant.js"
+    },
+        {
+        "scenes": "help-data",
+        "source": "app/assistants/help-data-assistant.js"
     }
 ]
