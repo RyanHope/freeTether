@@ -16,6 +16,9 @@ function StartupAssistant(changelog)
       [
         'Set "default" gateway/router IP to 192.168.100.1',
         'Add help overlay to all options',
+        'Set font color TCP settings to crimson if invalid,
+        'Disable main toggles if there are invalid TCP settings',
+        'Turn "DHCP Server" text crimson if there are invalid TCP settings'
       ]
     },
 	{
