@@ -70,6 +70,17 @@
   padding: 0px 0px 0px 5px;
   float:left;
 }
+.help .img_paypal
+{
+  position:relative;
+  left:8px;
+  top:10px;
+  width:32px; 
+  height:32px;
+  background: url(../images/help/paypal.png) no-repeat  bottom;
+  padding: 0px 0px 0px 5px;
+  float:left;
+}
 .help .img_web
 {
   position:relative;

@@ -28,13 +28,18 @@ HelpAssistant.prototype.setup = function() {
   );
 	
 	this.controller.get('appname').innerHTML = Mojo.appInfo.title;
-	this.controller.get('appdetails').innerHTML = Mojo.appInfo.version;
+	this.controller.get('appdetails').innerHTML = 'v'+Mojo.appInfo.version;
 	
 	this.supportModel = 
 	{
 		items: []
 	};
-	
+	this.supportModel.items.push({
+		text: $L("Donate"),
+		detail: 'https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=2HVTWGXCB6C7N',
+		Class: 'img_paypal',
+		type: 'web'
+	});
 	this.supportModel.items.push({
 		text: $L("WebOS Internals Wiki"),
 		detail: 'http://www.webos-internals.org/wiki/Application:FreeTether',
