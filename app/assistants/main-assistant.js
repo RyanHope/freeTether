@@ -157,6 +157,7 @@ MainAssistant.prototype.setup = function() {
 	this.controller.setupWidget('usbSpinner', {}, this.ifSpinner.usb);
 	
 	if (! prefs.get().invalidTCP) {
+		FreeTetherService.setIP(prefs.get().gateway, prefs.get().subnet, prefs.get().dhcpStart, prefs.get().dhcpLeases, prefs.get().leaseTime);
 		if (prefs.get().autoWiFi)
 			this.addInterface('wifi');
 		if (prefs.get().autoBT)

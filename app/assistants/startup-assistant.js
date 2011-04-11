@@ -11,6 +11,13 @@ function StartupAssistant(changelog)
     this.newMessages =
 	[
 	{
+      version: '1.1.2',
+      log:
+      [
+        'Make sure custom TCP prefs are used on startup',
+      ]
+    },
+	{
       version: '1.1.1',
       log:
       [
