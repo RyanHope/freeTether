@@ -34,7 +34,9 @@ preferenceCookie.prototype.get = function(reload)
 				dhcpStart:              '192.168.100.50',
 				dhcpLeases:             15,
 				leaseTime:              7200,
-				
+				autoWiFi:				false,
+				autoBT:					false,
+				autoUSB:				false,
 				invalidTCP:				false,
 				
 				noEditIP:               false,

@@ -82,6 +82,10 @@ MainAssistant.prototype.setup = function() {
     {
       visible: true,
       items: [
+	  	{
+          label: "General Prefs",
+          command: 'do-general'
+        },
         {
           label: "WiFi Prefs",
           command: 'do-wifi'
@@ -151,6 +155,15 @@ MainAssistant.prototype.setup = function() {
 	this.controller.setupWidget('wifiSpinner', {}, this.ifSpinner.wifi);
 	this.controller.setupWidget('btSpinner', {}, this.ifSpinner.bluetooth);
 	this.controller.setupWidget('usbSpinner', {}, this.ifSpinner.usb);
+	
+	if (! prefs.get().invalidTCP) {
+		if (prefs.get().autoWiFi)
+			this.addInterface('wifi');
+		if (prefs.get().autoBT)
+			this.addInterface('bluetooth');
+		if (prefs.get().autoUSB)
+			this.addInterface('usb');
+	}
 	
 };
 
@@ -383,6 +396,10 @@ MainAssistant.prototype.handleCommand = function(event) {
         this.controller.stageController.pushScene('help');
         break;
         
+	  case 'do-general':
+        this.controller.stageController.pushScene('generalPrefs');
+        break;
+		
       case 'do-wifi':
         this.controller.stageController.pushScene('wifiPrefs');
         break;

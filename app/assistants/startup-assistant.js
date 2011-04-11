@@ -11,6 +11,13 @@ function StartupAssistant(changelog)
     this.newMessages =
 	[
 	{
+      version: '1.1.1',
+      log:
+      [
+        'Added options to auto-tether interfaces on app startup',
+      ]
+    },
+	{
       version: '1.1.0',
       log:
       [

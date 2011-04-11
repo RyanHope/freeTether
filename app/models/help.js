@@ -34,5 +34,9 @@ helpData.lookup =
 	// Bluetooth
 	'pan':					{ title: 'PAN Profile',				data: 'This sets enables or disable the personal area network (PAN) bluetooth profile. This option is not 100% functional yet. Use at your own risk.' },
 	
+	// General
+	'auto-wifi':			{ title: 'Auto WiFi Tether',		data: 'This automatically enables WiFi tethering when freeTether starts.' },
+	'auto-bt':				{ title: 'Auto BT Tether',			data: 'This automatically enables Bluetooth tethering when freeTether starts.' },
+	'auto-usb':				{ title: 'Auto USB Tether',			data: 'This automatically enables USB tethering when freeTether starts.' },
 	
 };

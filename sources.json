@@ -29,6 +29,10 @@
         "source": "app/assistants/btPrefs-assistant.js"
     },
     {
+        "scenes": "generalPrefs",
+        "source": "app/assistants/generalPrefs-assistant.js"
+    },
+    {
         "scenes": "client",
         "source": "app/assistants/client-assistant.js"
     },
