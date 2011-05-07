@@ -39,7 +39,7 @@ MainAssistant.prototype.setup = function() {
 	
 	this.controller.listen('wifi-row', Mojo.Event.tap, this.ifaceRowTapped.bindAsEventListener(this, 'wifiPrefs'));
 	this.controller.listen('bt-row', Mojo.Event.tap, this.ifaceRowTapped.bindAsEventListener(this, 'btPrefs'));
-	//this.controller.listen('usb-row', Mojo.Event.tap, this.ifaceRowTapped.bindAsEventListener(this, 'usbPrefs'));
+	this.controller.listen('usb-row', Mojo.Event.tap, this.ifaceRowTapped.bindAsEventListener(this, 'usbPrefs'));
 	this.controller.listen('dhcp-row', Mojo.Event.tap, this.ifaceRowTapped.bindAsEventListener(this, 'tcpPrefs'));
 
   this.clientList = this.controller.get('clientList');

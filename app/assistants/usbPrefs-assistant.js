@@ -17,6 +17,9 @@ function UsbPrefsAssistant() {
     value: 0,
     disabled: this.prefs.noEditUSB
   }; 
+  
+  this.secretString = '';
+  this.secretAnswer = 'iknowwhatimdoing';
 
 }
 
@@ -37,8 +40,31 @@ UsbPrefsAssistant.prototype.setup = function() {
   this.controller.listen('usbGadget', Mojo.Event.propertyChange, this.usbChangedHandler);
   
   this.getUSBSubscription = FreeTetherService.getUSB({subscribe: true}, this.updateUSB.bind(this));
+  
+  this.keyPressHandler = this.keyPress.bindAsEventListener(this)
+  Mojo.Event.listen(this.controller.sceneElement, Mojo.Event.keypress, this.keyPressHandler);
 
 };
+
+UsbPrefsAssistant.prototype.keyPress = function(event) {
+
+	this.secretString += String.fromCharCode(event.originalEvent.charCode);
+         
+	if (event.originalEvent.charCode == 8) {
+ 		this.secretString = '';
+	}
+	
+	if (this.secretString.length == this.secretAnswer.length) {
+		if (this.secretString === this.secretAnswer) {
+ 			this.controller.get('usbAdvanced').style.display = '';
+ 			this.controller.get('usbWarning').style.display = 'none';
+ 			this.secretString = '';
+ 		}
+	} else if (this.secretString.length > this.secretAnswer.length) {
+		this.secretString = '';
+	}
+	
+}
 
 UsbPrefsAssistant.prototype.usbChanged = function(event) {
   FreeTetherService.setUSB({'state':event.value});

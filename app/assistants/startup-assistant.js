@@ -11,6 +11,13 @@ function StartupAssistant(changelog)
     this.newMessages =
 	[
 	{
+      version: '1.1.3',
+      log:
+      [
+        'Add advanced usb prefs back, only visible if secret passphrase is typed',
+      ]
+    },
+	{
       version: '1.1.2',
       log:
       [
