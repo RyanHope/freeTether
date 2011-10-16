@@ -10,10 +10,6 @@
 #include "freetether.h"
 #include "luna_methods.h"
 
-#ifndef APP_ID
-#error Must define APP_ID macro
-#endif
-
 struct iface_info ifaceInfo;
 
 static int sys_info_init() {
@@ -110,7 +106,7 @@ int main(int argc, char **argv) {
   signal(SIGQUIT, sighandler);
   signal(SIGHUP, sighandler);
 
-  openlog(APP_ID, LOG_PID, LOG_USER);
+  openlog("org.webosinternals.freetether", LOG_PID, LOG_USER);
 
   setup_fake_proc();
 
@@ -124,7 +120,7 @@ int main(int argc, char **argv) {
   if (ret == -1) return -1;
   else if (ret > 0) kill(ret, SIGKILL);
 
-  if (!sys_info_init() && luna_service_initialize(APP_ID)) {
+  if (!sys_info_init() && luna_service_initialize("org.webosinternals.freetether")) {
     pthread_create(&ipmon_tid, NULL, ipmon_thread, NULL);
     pthread_create(&usbgadgetmon_tid, NULL, usbgadgetmon_thread, NULL);
     luna_service_start();

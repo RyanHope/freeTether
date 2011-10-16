@@ -12,17 +12,23 @@ APPS=/media/cryptofs/apps
 # Remove the freetether executable
 rm -f /var/usr/sbin/${PID}
 
+# Remove the dbus service
+rm -f /var/palm/system-services/${PID}.service
+
 # Remove the ls2 roles
 rm -f /var/palm/ls2/roles/pub/${PID}.json
 rm -f /var/palm/ls2/roles/prv/${PID}.json
 
 # Install the freetether executable
 mkdir -p /var/usr/sbin/
-install -m 755 $APPS/usr/palm/applications/${PID}/bin/${PID} /var/usr/sbin/${PID}
+install -m 755 $APPS/usr/palm/applications/${PID}/src/freetether /var/usr/sbin/${PID}
 
 # Install the dbus service
 mkdir -p /var/palm/system-services
 cp $APPS/usr/palm/applications/${PID}/dbus/${PID}.service /var/palm/system-services/${PID}.service
+mkdir -p /var/palm/ls2/services/prv /var/palm/ls2/services/pub
+cp $APPS/usr/palm/applications/${PID}/dbus/${PID}.service /var/palm/ls2/services/prv/${PID}.service
+cp $APPS/usr/palm/applications/${PID}/dbus/${PID}.service /var/palm/ls2/services/pub/${PID}.service
 
 # Install the ls2 roles
 if [ -d /var/palm/ls2/roles ]; then
