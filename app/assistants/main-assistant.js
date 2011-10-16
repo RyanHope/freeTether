@@ -1,8 +1,16 @@
 function MainAssistant() {
 
+  switch (Mojo.Environment.DeviceInfo.modelNameAscii) {
+    case 'Veer':
+      this.WIFI_IFNAME = "eth0";
+      break;
+    default:
+      this.WIFI_IFNAME = "uap0";
+      break;
+  }
+
   this.DEFAULT_NETWORK = 'freeTether';
   this.DEFAULT_SECURITY = 'Open';
-	this.WIFI_IFNAME = "uap0";
   this.BT_IFNAME = "bsl0";
   this.USB_IFNAME = "usb0:1";
 

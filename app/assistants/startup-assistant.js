@@ -11,6 +11,14 @@ function StartupAssistant(changelog)
     this.newMessages =
 	[
 	{
+      version: '1.1.4',
+      log:
+      [
+        'Pre3 screen size fix',
+        'Properly disable wifi on Veer'
+      ]
+    },
+	{
       version: '1.1.3',
       log:
       [
