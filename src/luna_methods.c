@@ -858,6 +858,12 @@ bool netif_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
   return true;
 }
 
+void remove_bridge(struct interface *iface) {
+	char command[80];
+	sprintf(command, "brctl delif bridge0 %s", iface->ifname);
+	system(command);
+}
+
 void add_bridge(struct interface *iface) {
   LSError lserror;
   LSErrorInit(&lserror);
@@ -994,6 +1000,8 @@ void remove_iface(struct interface *iface) {
 
   if (remove_connections(iface))
     clientlist_response();
+
+  remove_bridge(iface);
 
   syslog(LOG_DEBUG, "MUTEX ifaceInfo take ri");
   pthread_mutex_lock(&ifaceInfo.mutex);
