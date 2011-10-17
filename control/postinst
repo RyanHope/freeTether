@@ -26,8 +26,9 @@ if [ -f /usr/bin/mobilehotspotd ]; then
 	/usr/bin/killall -9 mobilehotspotd
 
 	# Backup and uninstall mobilehotspotd
-	mv /usr/bin/mobilehotspotd $APPS/usr/palm/packages/${PID}/
-	mv /usr/palm/applications/com.palm.app.mobilehotspot $APPS/usr/palm/packages/${PID}/
+	mkdir -p $APPS/usr/palm/applications/${PID}/backup
+	mv /usr/bin/mobilehotspotd $APPS/usr/palm/applications/${PID}/backup
+	mv /usr/palm/applications/com.palm.app.mobilehotspot $APPS/usr/palm/applications/${PID}/backup
 
 	luna-send -n 1 palm://com.palm.applicationManager/rescan {}
 

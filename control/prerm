@@ -33,8 +33,8 @@ rm -f /var/palm/ls2/roles/prv/${PID}.json
 if [ -f $APPS/usr/palm/packages/${PID}/mobilehotspotd ]; then
 
 	# Restore mobilehotspotd
-	mv $APPS/usr/palm/packages/${PID}/mobilehotspotd /usr/bin/
-	mv $APPS/usr/palm/packages/${PID}/com.palm.app.mobilehotspot /usr/palm/applications/
+	mv $APPS/usr/palm/applications/${PID}/backup/mobilehotspotd /usr/bin/
+	mv $APPS/usr/palm/applications/${PID}/backup/com.palm.app.mobilehotspot /usr/palm/applications/
 
 	luna-send -n 1 palm://com.palm.applicationManager/rescan {}
 
