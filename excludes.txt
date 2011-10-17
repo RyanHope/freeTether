@@ -3,3 +3,4 @@ src/*.c
 src/*.h
 src/*.so
 src/Makefile
+scripts/restore_mhs.py

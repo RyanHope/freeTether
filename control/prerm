@@ -13,6 +13,7 @@ APPS=/media/cryptofs/apps
 [ -d $APPS ] || { echo "Requires webOS 1.3.5 or later" ; exit 1 ; }
 
 # Stop the service if running
+/sbin/stop ${PID}
 /usr/bin/killall -9 ${PID} || true
 
 # Remove the freetether executable
@@ -30,13 +31,13 @@ rm -f /var/palm/ls2/roles/prv/${PID}.json
 # Run some cleanup
 /bin/sh -e ${APPS}/usr/palm/applications/${PID}/scripts/cleanup.sh
 
-if [ -f $APPS/usr/palm/packages/${PID}/mobilehotspotd ]; then
+if [ -f $APPS/usr/palm/applications/${PID}/backup/mobilehotspotd ]; then
 
 	# Restore mobilehotspotd
 	mv $APPS/usr/palm/applications/${PID}/backup/mobilehotspotd /usr/bin/
-	mv $APPS/usr/palm/applications/${PID}/backup/com.palm.app.mobilehotspot /usr/palm/applications/
+	cd /usr/palm/applications; tar xvf $APPS/usr/palm/applications/${PID}/backup/com.palm.app.mobilehotspot.tar
 
-	luna-send -n 1 palm://com.palm.applicationManager/rescan {}
+	luna-send -n 1 palm://com.palm.applicationManager/rescan '{}'
 
 fi
 

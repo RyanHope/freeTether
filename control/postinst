@@ -4,6 +4,8 @@ PID="org.webosinternals.freetether"
 
 APPS=/media/cryptofs/apps
 
+mount -o remount,rw /
+
 [ -d $APPS ] || { echo "Requires webOS 1.3.5 or later" ; exit 1 ; }
 
 # Stop the service if running
@@ -27,10 +29,11 @@ if [ -f /usr/bin/mobilehotspotd ]; then
 
 	# Backup and uninstall mobilehotspotd
 	mkdir -p $APPS/usr/palm/applications/${PID}/backup
-	mv /usr/bin/mobilehotspotd $APPS/usr/palm/applications/${PID}/backup
-	mv /usr/palm/applications/com.palm.app.mobilehotspot $APPS/usr/palm/applications/${PID}/backup
+	mv /usr/bin/mobilehotspotd $APPS/usr/palm/applications/${PID}/backup/
+	cd /usr/palm/applications; tar -cf $APPS/usr/palm/applications/${PID}/backup/com.palm.app.mobilehotspot.tar com.palm.app.mobilehotspot
+	rm -rf /usr/palm/applications/com.palm.app.mobilehotspot
 
-	luna-send -n 1 palm://com.palm.applicationManager/rescan {}
+	luna-send -n 1 palm://com.palm.applicationManager/rescan '{}'
 
 fi
 
