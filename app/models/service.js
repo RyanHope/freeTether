@@ -143,10 +143,14 @@ FreeTetherService.setIP = function(gateway, subnet, poolstart, maxLeases, leaseT
 
   return request;
 };
-FreeTetherService.stop = function(callback) {
+FreeTetherService.stop = function(wifi, usb, bluetooth, callback) {
   var request = new Mojo.Service.Request(FreeTetherService.ServiceUri, {
     method: 'stop',
-    parameters: '{}',
+    parameters: {
+			wifi: wifi,
+			usb: usb,
+			bluetooth: bluetooth
+    },
     onSuccess: callback,
     onFailure: callback
   });

@@ -511,5 +511,6 @@ MainAssistant.prototype.deactivate = function(event) {
 };
 
 MainAssistant.prototype.cleanup = function(event) {
-  FreeTetherService.stop();
+	Mojo.Log.error('MainAssistant#cleaup')
+	FreeTetherService.stop(this.WIFI_IFNAME, this.USB_IFNAME, this.BT_IFNAME);
 };

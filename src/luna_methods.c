@@ -270,9 +270,9 @@ static void free_iface(struct interface *iface) {
 }
 
 struct interface *get_iface(char *type, char *ifname) {
-  struct interface *iface;
+  struct interface *iface = NULL;
 
-  if (!ifname && !type)
+  if (!ifname || !type)
     return NULL;
 
   syslog(LOG_DEBUG, "MUTEX ifaceInfo take get_iface");
@@ -858,9 +858,15 @@ bool netif_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
   return true;
 }
 
-void remove_bridge(struct interface *iface) {
+void wifi_set_managed(char *ifname) {
 	char command[80];
-	sprintf(command, "brctl delif bridge0 %s", iface->ifname);
+	sprintf(command, "iwconfig %s mode managed", ifname);
+	system(command);
+}
+
+void remove_bridge(char *ifname) {
+	char command[80];
+	sprintf(command, "brctl delif bridge0 %s", ifname);
 	system(command);
 }
 
@@ -1001,8 +1007,6 @@ void remove_iface(struct interface *iface) {
   if (remove_connections(iface))
     clientlist_response();
 
-  remove_bridge(iface);
-
   syslog(LOG_DEBUG, "MUTEX ifaceInfo take ri");
   pthread_mutex_lock(&ifaceInfo.mutex);
   iter = ifaceInfo.ifaces;
@@ -1015,8 +1019,6 @@ void remove_iface(struct interface *iface) {
   }
 
   if (iter == iface) {
-    ifaceInfo.ifaces = iface->next;
-    free_iface(iface);
 
     if (!ifaceInfo.ifaces) {
       LSError lserror;
@@ -1025,6 +1027,10 @@ void remove_iface(struct interface *iface) {
       LSCall(priv_serviceHandle, "palm://com.palm.dhcp/interfaceFinalize",
           "{\"interface\":\"bridge0\"}", dhcp_final_callback, NULL, NULL, &lserror);
     }
+    
+    ifaceInfo.ifaces = iface->next;
+    remove_bridge(iface->ifname);
+    free_iface(iface);
 
     goto done;
   }
@@ -1035,6 +1041,7 @@ void remove_iface(struct interface *iface) {
 
   if (iter->next) {
     iter->next = iface->next;
+    remove_bridge(iface->ifname);
     free_iface(iface);
   }
 
@@ -1313,11 +1320,12 @@ bool disable_wifi_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
     if (!iface)
       return false;
 
-    if (errorText && !strcmp(errorText, "AlreadyDisabled")) {
-      pthread_mutex_lock(&iface->mutex);
+		pthread_mutex_lock(&iface->mutex);
+    if (errorText && !strcmp(errorText, "AlreadyDisabled"))
       iface->start_state = WIFI_DISABLED;
-      pthread_mutex_unlock(&iface->mutex);
-    }
+    else
+      iface->start_state = WIFI_ENABLED;
+    pthread_mutex_unlock(&iface->mutex);
 
     asprintf(&payload, "{\"SSID\": \"%s\", \"Security\": \"%s\"", ap->ssid, ap->security);
 
@@ -1581,6 +1589,26 @@ bool stop(LSHandle *sh, LSMessage *msg, void *ctx) {
   LSError lserror;
   LSErrorInit(&lserror);
 
+  json_t *object;
+  object = json_parse_document(LSMessageGetPayload(msg));
+
+  char *wifi = NULL;
+  char *usb = NULL;
+  char *bluetooth = NULL;
+
+  json_get_string(object, "wifi", &wifi);
+  json_get_string(object, "usb", &usb);
+  json_get_string(object, "bluetooth", &bluetooth);
+  
+	struct interface *iface = get_iface("wifi", wifi);
+	if (iface) {  
+	  wifi_set_managed(wifi);
+	  if (iface->start_state == WIFI_ENABLED) {
+	    LSCall(priv_serviceHandle, "luna://com.palm.wifi/setstate", "{\"state\":\"enabled\"}",
+	        NULL, NULL, NULL, &lserror);
+	  }
+  }
+
   LSMessageReply(sh, msg, "{\"returnValue:\": true}", &lserror);
 
   if (loop)
@@ -1588,7 +1616,6 @@ bool stop(LSHandle *sh, LSMessage *msg, void *ctx) {
 
   return true;
 }
-
 bool setIP(LSHandle *sh, LSMessage *msg, void *ctx) {
   LSError lserror;
   LSErrorInit(&lserror);

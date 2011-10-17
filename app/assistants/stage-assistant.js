@@ -15,6 +15,10 @@ StageAssistant.prototype.setup = function() {
 
 };
 
+StageAssistant.prototype.cleanup = function() {
+	Mojo.Log.error('StageAssistant#cleaup');
+};
+
 function objectToString(o) {
   var parse = function(_o) {
     var a = [], t;
