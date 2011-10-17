@@ -110,16 +110,6 @@ int main(int argc, char **argv) {
 
   setup_fake_proc();
 
-  int ret = is_mounted("/usr/bin/mobilehotspotd");
-  if (ret == -1) return -1;
-  else if (ret == 0 && mount("/bin/true", "/usr/bin/mobilehotspotd", NULL, MS_BIND, NULL)) {
-    syslog(LOG_ERR, "Failed binding /bin/true to /usr/bin/mobilehotspotd");
-    return -1;
-  }
-  ret = get_pid_by_name("mobilehotspotd");
-  if (ret == -1) return -1;
-  else if (ret > 0) kill(ret, SIGKILL);
-
   if (!sys_info_init() && luna_service_initialize("org.webosinternals.freetether")) {
     pthread_create(&ipmon_tid, NULL, ipmon_thread, NULL);
     pthread_create(&usbgadgetmon_tid, NULL, usbgadgetmon_thread, NULL);

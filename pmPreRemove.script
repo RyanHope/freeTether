@@ -19,7 +19,9 @@ APPS=/media/cryptofs/apps
 rm -f /var/usr/sbin/${PID}
 
 # Remove the dbus service
-rm -f /var/palm/system-ervices/${PID}.service
+rm -f /var/palm/system-services/${PID}.service
+rm -f /var/palm/ls2/services/prv/${PID}.service
+rm -f /var/palm/ls2/services/pub/${PID}.service
 
 # Remove the ls2 roles
 rm -f /var/palm/ls2/roles/pub/${PID}.json
@@ -27,5 +29,15 @@ rm -f /var/palm/ls2/roles/prv/${PID}.json
 
 # Run some cleanup
 /bin/sh -e ${APPS}/usr/palm/applications/${PID}/scripts/cleanup.sh
+
+if [ -f $APPS/usr/palm/packages/${PID}/mobilehotspotd ]; then
+
+	# Restore mobilehotspotd
+	mv $APPS/usr/palm/packages/${PID}/mobilehotspotd /usr/bin/
+	mv $APPS/usr/palm/packages/${PID}/com.palm.app.mobilehotspot /usr/palm/applications/
+
+	luna-send -n 1 palm://com.palm.applicationManager/rescan {}
+
+fi
 
 exit 0

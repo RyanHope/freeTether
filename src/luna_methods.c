@@ -1162,7 +1162,7 @@ bool interfaceRemove(LSHandle *sh, LSMessage *msg, void *ctx) {
   else {
     struct interface *iface = get_iface(type, ifname);
 
-    if (!strcmp(type, "bluetooth")) {
+    if (iface && !strcmp(type, "bluetooth")) {
       pthread_mutex_lock(&iface->mutex);
       iface->iface_state = DESTROY_REQUESTED;
       pthread_mutex_unlock(&iface->mutex);
