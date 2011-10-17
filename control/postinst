@@ -33,7 +33,7 @@ if [ -f /usr/bin/mobilehotspotd ]; then
 	cd /usr/palm/applications; tar -cf $APPS/usr/palm/applications/${PID}/backup/com.palm.app.mobilehotspot.tar com.palm.app.mobilehotspot
 	rm -rf /usr/palm/applications/com.palm.app.mobilehotspot
 
-	luna-send -n 1 palm://com.palm.applicationManager/rescan '{}'
+	/usr/bin/luna-send -n 1 palm://com.palm.applicationManager/rescan {}&
 
 fi
 

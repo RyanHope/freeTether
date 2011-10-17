@@ -36,8 +36,8 @@ if [ -f $APPS/usr/palm/applications/${PID}/backup/mobilehotspotd ]; then
 	# Restore mobilehotspotd
 	mv $APPS/usr/palm/applications/${PID}/backup/mobilehotspotd /usr/bin/
 	cd /usr/palm/applications; tar xvf $APPS/usr/palm/applications/${PID}/backup/com.palm.app.mobilehotspot.tar
-
-	luna-send -n 1 palm://com.palm.applicationManager/rescan '{}'
+	
+	/usr/bin/luna-send -n 1 palm://com.palm.applicationManager/rescan {}&
 
 fi
 
