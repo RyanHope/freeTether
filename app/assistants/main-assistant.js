@@ -2,6 +2,7 @@ function MainAssistant() {
 
   switch (Mojo.Environment.DeviceInfo.modelNameAscii) {
     case 'Veer':
+    case 'Pre3':
       this.WIFI_IFNAME = "eth0";
       break;
     default:
