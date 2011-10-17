@@ -516,4 +516,5 @@ MainAssistant.prototype.cleanup = function(event) {
 	this.removeInterface('wifi')
 	this.removeInterface('usb')
 	this.removeInterface('bluetooth')
+	FreeTetherService.stop();
 };

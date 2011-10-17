@@ -811,7 +811,6 @@ bool netif_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
       syslog(LOG_DEBUG, "MUTEX ifaceInfo give n_cb");
       pthread_mutex_unlock(&ifaceInfo.mutex);
 
-      // TODO: less hard coding
       if (ifaceInfo.dhcp_state == START_REQUESTED) {
         char *payload;
         asprintf(&payload, "{ "\
@@ -829,20 +828,6 @@ bool netif_callback(LSHandle *sh, LSMessage *msg, void *ctx) {
         LSCall(priv_serviceHandle, "luna://com.palm.dhcp/interfaceInitialize", payload,
             dhcp_callback, NULL, NULL, &lserror);
         free(payload);
-
-#if 0
-        LSCall(priv_serviceHandle, "luna://com.palm.dhcp/interfaceInitialize", "{ " \
-              "\"interface\":\"bridge0\", "\
-              "\"mode\":\"server\", "\
-              "\"ipv4Address\":\"10.1.1.11\", "\
-              "\"ipv4Subnet\":\"255.255.255.0\", "\
-              "\"ipv4Router\":\"10.1.1.11\", "\
-              "\"dnsServers\":[\"10.1.1.11\"], "\
-              "\"ipv4RangeStart\":\"10.1.1.50\", "\
-              "\"maxLeases\":15, "\
-              "\"leaseTime\":7200}", 
-              dhcp_callback, NULL, NULL, &lserror);
-#endif
       }
     }
   }
@@ -1589,30 +1574,10 @@ bool stop(LSHandle *sh, LSMessage *msg, void *ctx) {
   LSError lserror;
   LSErrorInit(&lserror);
 
-  json_t *object;
-  object = json_parse_document(LSMessageGetPayload(msg));
-
-  char *wifi = NULL;
-  char *usb = NULL;
-  char *bluetooth = NULL;
-
-  json_get_string(object, "wifi", &wifi);
-  json_get_string(object, "usb", &usb);
-  json_get_string(object, "bluetooth", &bluetooth);
-  
-	struct interface *iface = get_iface("wifi", wifi);
-	if (iface) {  
-	  wifi_set_managed(wifi);
-	  if (iface->start_state == WIFI_ENABLED) {
-	    LSCall(priv_serviceHandle, "luna://com.palm.wifi/setstate", "{\"state\":\"enabled\"}",
-	        NULL, NULL, NULL, &lserror);
-	  }
-  }
+  LSCall(priv_serviceHandle, "palm://com.palm.dhcp/interfaceFinalize",
+          "{\"interface\":\"bridge0\"}", dhcp_final_callback, NULL, NULL, &lserror);
 
   LSMessageReply(sh, msg, "{\"returnValue:\": true}", &lserror);
-
-  if (loop)
-    g_main_loop_quit(loop);
 
   return true;
 }

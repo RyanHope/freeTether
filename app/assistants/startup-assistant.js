@@ -14,6 +14,8 @@ function StartupAssistant(changelog)
       version: '1.2.0',
       log:
       [
+      	'Backs up and hides Mobile Hotspot on install',
+      	'Make freeTether\'s service persistent instead of dynamic',
         'Pre3 screen size fix',
         'Remove bt and usb interfaces from bridge when disabled',
         'Restore previous states when app is closed with out disabling first',
