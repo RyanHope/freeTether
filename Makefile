@@ -5,7 +5,7 @@ APPID = org.webosinternals.freetether
 all: package
 
 service:
-	$(MAKE) -C src
+	$(MAKE) -C src/c-service
 
 package: service
 	palm-package -X excludes.txt .
@@ -23,7 +23,7 @@ put-svc:
 	novacom put file:///var/usr/sbin/${APPID} < src/freetether
 
 clobber:
-	$(MAKE) -C src clobber
+	$(MAKE) -C src/c-service clobber
 	rm -rf build *.ipk
 
 clean: clobber

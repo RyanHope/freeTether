@@ -1,0 +1,6 @@
+luna-send -n 1 palm://com.palm.wan/connectservice '{"service":"tethered","usage":"userInitiated"}'
+luna-send -n 1 palm://com.palm.wan/disconnectservice '{"service":"tethered"}'
+luna-send -n 1 palm://com.palm.telephony/tetheredSet '{"enable":true}'
+
+
+luna-send -n 1 palm://com.palm.connectionmanager/cm '{"doSwitchTetheredModeWhenMhsIsTurnedOn": true}'

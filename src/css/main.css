@@ -1,0 +1,47 @@
+.main {
+	background-image: url(../../images/background_tile.png);
+}
+
+.prefs {
+	background-image: url(../../images/background_tile2.png);
+}
+
+.ft-label {
+	color: black;
+	font-size: .7rem;
+	text-transform: uppercase;
+}
+
+.status-nocable {
+	background-image: url(../../images/icon-nocable.png);
+	width: 128px;
+	height: 128px;
+}
+
+.wifiIcon {
+	background-image: url(../../images/wifi.png);
+	background-position:center;
+	width: 74px;
+	height: 64px;
+}
+
+.bluetoothIcon {
+	background-image: url(../../images/bluetooth.png);
+	background-position:center;
+	width: 74px;
+	height: 64px;
+}
+
+.usbIcon {
+	background-image: url(../../images/usb.png);
+	background-position:center;
+	width: 74px;
+	height: 64px;
+}
+
+.group {
+	border-width: 14px;
+	-webkit-border-image: url(../../images/dialog-group-unlabeled.png) 14 14 repeat repeat;
+	margin: 8px 0;
+	padding: 8px 8px;
+}

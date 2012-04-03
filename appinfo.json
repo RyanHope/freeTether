@@ -1,10 +1,11 @@
 {
-	"id": "org.webosinternals.freetether",
-	"version": "1.2.0",
-	"vendor": "WebOS Internals",
-	"type": "web",
-	"main": "index.html",
 	"title": "freeTether",
-	"icon": "icon.png",
-	"theme": "dark"
+	"id": "org.webosinternals.freetether2",
+	"version": "2.0.0",
+	"vendor": "Ryan Hope",
+	"type": "web",
+	"noDeprecatedStyles": true,
+	"main": "index.html",
+	"icon": "images/icon.png",
+	"uiRevision": 2,
 }
